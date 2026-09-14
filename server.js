@@ -288,6 +288,114 @@ app.get("/api/slice", async (req, res) => {
   }
 });
 
+// ===========================================================================
+// MAP: parcel geometry from Montana's public ArcGIS parcels layer.
+// cadastralapi has NO geometry; this is the same layer the old GeocodeApp used.
+// (gisservicemt.gov now redirects to gisservice.mt.gov.)
+// ===========================================================================
+// MT State Library moved its GIS services in 2026: the old gisservicemt.gov /
+// MSDI_Framework/Parcels path now serves a "Services Have Moved" HTML page.
+// Parcels are layer 1 of msdi_cadastral_map_v1 (field is still PARCELID).
+// Confirmed against the Nov-2025 working copy of GeocodeApp.
+const ARCGIS_QUERY =
+  "https://gisservice.mt.gov/arcgis/rest/services/msdi_cadastral_map_v1/MapServer/1/query";
+
+async function arcgisFetch(params) {
+  const url = new URL(ARCGIS_QUERY);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const key = url.toString();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": USER_AGENT }, signal: controller.signal });
+    if (!res.ok) { const e = new Error(`ArcGIS returned ${res.status}`); e.status = res.status; throw e; }
+    const data = await res.json();
+    if (data && data.error) { const e = new Error(data.error.message || "ArcGIS query error"); e.status = 502; throw e; }
+    cache.set(key, { at: Date.now(), data });
+    return data;
+  } finally { clearTimeout(timer); }
+}
+
+// ArcGIS polygon rings -> GeoJSON FeatureCollection (Leaflet reads this directly).
+function arcgisToGeoJSON(features) {
+  return {
+    type: "FeatureCollection",
+    features: (features || [])
+      .filter((f) => f.geometry && Array.isArray(f.geometry.rings))
+      .map((f) => ({
+        type: "Feature",
+        properties: { PARCELID: f.attributes && (f.attributes.PARCELID || f.attributes.parcelid) },
+        geometry: { type: "Polygon", coordinates: f.geometry.rings },
+      })),
+  };
+}
+
+// One parcel by geocode — tries PARCELID formatting variants (formatting is
+// inconsistent in the layer, so we try as-is, hyphen-stripped, and upper-case).
+app.get("/api/parcel", async (req, res) => {
+  const geocode = cleanGeocode(req.query.geocode);
+  if (!geocode) return res.status(400).json({ error: "Invalid geocode." });
+  const variants = [...new Set([
+    geocode,
+    geocode.replace(/-/g, ""),
+    geocode.toUpperCase(),
+    geocode.replace(/-/g, "").toUpperCase(),
+  ])];
+  try {
+    for (const v of variants) {
+      const data = await arcgisFetch({
+        where: `PARCELID='${v}'`,
+        outFields: "PARCELID",
+        returnGeometry: "true",
+        outSR: "4326",
+        f: "json",
+      });
+      if (Array.isArray(data.features) && data.features.length > 0) {
+        return res.json(arcgisToGeoJSON(data.features));
+      }
+    }
+    return res.json({ type: "FeatureCollection", features: [] });
+  } catch (err) {
+    return res.status(err.status || 502).json({ error: `Parcel geometry lookup failed (${err.message}).` });
+  }
+});
+
+// All parcels intersecting a map view. bbox = west,south,east,north (lng/lat).
+app.get("/api/parcels", async (req, res) => {
+  const bbox = String(req.query.bbox || "").split(",").map(Number);
+  if (bbox.length !== 4 || bbox.some((x) => !isFinite(x))) {
+    return res.status(400).json({ error: "bbox must be 'west,south,east,north'." });
+  }
+  const [w, s, e, n] = bbox;
+  // Simplify geometry proportional to the view width so payloads stay small and fast
+  // regardless of zoom (outlines look identical at map zoom; avoids the 30s timeout on
+  // heavy full-geometry responses when ArcGIS is slow).
+  const maxOffset = Math.abs(e - w) / 4000;
+  try {
+    const data = await arcgisFetch({
+      geometry: `${w},${s},${e},${n}`,
+      geometryType: "esriGeometryEnvelope",
+      inSR: "4326",
+      spatialRel: "esriSpatialRelIntersects",
+      outFields: "PARCELID",
+      returnGeometry: "true",
+      outSR: "4326",
+      maxAllowableOffset: String(maxOffset),
+      geometryPrecision: "6",
+      resultRecordCount: "1000",
+      f: "json",
+    });
+    const fc = arcgisToGeoJSON(data.features);
+    fc.exceededTransferLimit = !!data.exceededTransferLimit;
+    return res.json(fc);
+  } catch (err) {
+    return res.status(err.status || 502).json({ error: `Parcel map lookup failed (${err.message}).` });
+  }
+});
+
 // Serve the frontend
 app.use(express.static(path.join(__dirname, "public")));
 

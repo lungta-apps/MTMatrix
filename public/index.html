@@ -4,53 +4,45 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MTMatrix</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
   @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
   :root{
-    /* Futurepedia Glossy Tech tokens (exact) */
     --void-900:#03060c; --void-800:#060a14; --void-700:#0a101d; --void-600:#0f1626; --void-500:#161f33; --void-400:#1e2942;
     --ink-0:#ffffff; --ink-1:#e8f2fb; --ink-2:#b6c6da; --ink-3:#8395ad; --ink-4:#55657d; --ink-5:#33415a;
     --cyan-100:#d5fbff; --cyan-200:#9df1fb; --cyan-300:#6ae6f7; --cyan-400:#3fd8f0; --cyan-500:#22c2e0; --cyan-600:#159bb8; --cyan-700:#0d6b81;
     --violet-300:#b085f6; --violet-400:#9a63ef; --violet-500:#7f43dd;
     --amber-400:#e6ac5e; --blue-400:#4a9df8; --mint-400:#4ed9b0; --magenta-400:#e061c9;
-
     --bg-canvas:var(--void-900); --bg-panel:var(--void-700);
     --bg-node:rgba(10,16,29,.72); --bg-node-hover:rgba(18,30,52,.85); --bg-inset:rgba(255,255,255,.03);
     --text-primary:var(--ink-0); --text-body:var(--ink-2); --text-muted:var(--ink-3);
     --text-accent:var(--cyan-300);
-    --line-hairline:rgba(255,255,255,.08); --line-node:rgba(63,216,240,.35);
+    --line-hairline:rgba(255,255,255,.08); --line-node:rgba(63,216,240,.35); --mtable-grid:rgba(255,255,255,.20);
     --glow-cyan:rgba(63,216,240,.55);
     --wash-violet:radial-gradient(120% 90% at 0% 100%,rgba(124,58,237,.30) 0%,rgba(124,58,237,0) 60%);
     --wash-cyan:radial-gradient(110% 80% at 100% 0%,rgba(34,194,224,.18) 0%,rgba(34,194,224,0) 62%);
     --grad-canvas:radial-gradient(140% 110% at 50% 0%,#0a1220 0%,#04070e 55%,#03060c 100%);
     --grad-icon:linear-gradient(160deg,var(--cyan-200) 0%,var(--cyan-500) 100%);
-
     --glow-sm:0 0 12px rgba(63,216,240,.28);
     --glow-md:0 0 24px rgba(63,216,240,.35),0 0 4px rgba(111,232,255,.5);
     --inner-top:inset 0 1px 0 rgba(255,255,255,.14);
     --shadow-panel:0 18px 60px rgba(0,0,0,.6),var(--inner-top);
-
     --radius-sm:10px; --radius-md:14px; --radius-panel:18px; --radius-pill:999px;
     --font-core:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
     --ease:cubic-bezier(.22,.61,.36,1);
   }
-
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0;background:var(--bg-canvas);color:var(--text-body);font:400 15px/1.5 var(--font-core);-webkit-font-smoothing:antialiased}
-  .app{position:relative;min-height:100vh;display:flex;flex-direction:column;background:var(--grad-canvas)}
+  .app{position:relative;height:100vh;display:flex;flex-direction:column;background:var(--grad-canvas)}
   .app::before{content:"";position:fixed;inset:0;background:var(--wash-violet),var(--wash-cyan);pointer-events:none;z-index:0}
-  .app::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-    background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:48px 48px}
   .app>*{position:relative;z-index:1}
 
   .icon{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;display:inline-block;vertical-align:middle}
-  .mono{font-family:var(--font-mono)}
   .eyebrow{font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--text-muted)}
 
-  /* Top bar */
   header{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:14px 22px;border-bottom:1px solid var(--line-hairline);
     background:linear-gradient(180deg,rgba(10,16,29,.6),rgba(10,16,29,.2));backdrop-filter:blur(14px)}
   .brand{display:flex;align-items:center;gap:12px}
@@ -60,20 +52,17 @@
   .brand h1 span{color:var(--cyan-300)}
   .brand .eyebrow{display:block;margin-top:1px}
   .bar-spacer{flex:1 1 auto}
-
-  /* Search */
   .search{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .search .inp{display:flex;align-items:center;gap:8px;background:var(--bg-node);border:1px solid var(--line-hairline);border-radius:var(--radius-pill);padding:0 6px 0 14px}
   .search .inp:focus-within{border-color:var(--line-node);box-shadow:var(--glow-sm)}
   .search .inp .icon{width:16px;height:16px;color:var(--text-muted)}
-  .search input{background:none;border:none;outline:none;color:var(--text-primary);font:500 14px var(--font-mono);letter-spacing:.02em;width:230px;padding:9px 4px}
+  .search input{background:none;border:none;outline:none;color:var(--text-primary);font:500 14px var(--font-mono);letter-spacing:.02em;width:220px;padding:9px 4px}
   .search input::placeholder{color:var(--ink-4);font-family:var(--font-core);letter-spacing:0}
   .field{display:flex;align-items:center;gap:7px}
   .field label{font-size:12px;color:var(--text-muted)}
   select{appearance:none;font:500 13px var(--font-core);color:var(--text-primary);background:var(--bg-node);border:1px solid var(--line-hairline);border-radius:var(--radius-pill);padding:9px 32px 9px 14px;cursor:pointer;
     background-image:linear-gradient(45deg,transparent 50%,var(--cyan-400) 50%),linear-gradient(135deg,var(--cyan-400) 50%,transparent 50%);background-position:calc(100% - 17px) 52%,calc(100% - 12px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
   select:focus-visible{outline:none;border-color:var(--line-node);box-shadow:var(--glow-sm)}
-
   .btn{display:inline-flex;align-items:center;gap:7px;font:600 13px var(--font-core);cursor:pointer;padding:9px 16px;border-radius:var(--radius-pill);border:1px solid var(--line-hairline);background:var(--bg-node);color:var(--text-body);transition:all .18s var(--ease)}
   .btn .icon{width:16px;height:16px}
   .btn:hover{background:var(--bg-node-hover);color:var(--text-primary);border-color:var(--line-node)}
@@ -84,30 +73,41 @@
   .spinner{width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.25);border-top-color:var(--cyan-300);animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* Main */
-  main{flex:1 1 auto;display:flex;flex-direction:column;padding:18px 22px 22px;min-height:0}
-  .panel{background:var(--bg-panel);border:1px solid var(--line-hairline);border-radius:var(--radius-panel);box-shadow:var(--shadow-panel);display:flex;flex-direction:column;min-height:0;overflow:hidden;flex:1 1 auto}
+  main{flex:1 1 auto;display:grid;grid-template-columns:1.5fr 1fr;gap:18px;padding:18px 22px 22px;min-height:0}
+  .panel{background:var(--bg-panel);border:1px solid var(--line-hairline);border-radius:var(--radius-panel);box-shadow:var(--shadow-panel);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .panel-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line-hairline)}
+  .panel-head h2{margin:0;font-size:14px;font-weight:700;color:var(--text-primary);letter-spacing:.01em;display:flex;align-items:center;gap:8px}
+  .panel-head h2 .icon{color:var(--cyan-300)}
+  .ph-spacer{flex:1 1 auto}
+
+  /* map */
+  .map-wrap{position:relative;flex:1 1 auto;min-height:320px}
+  #map{position:absolute;inset:0;width:100%;height:100%}
+  .leaflet-container{background:#050a13;font:inherit}
+  .leaflet-control-attribution{background:rgba(3,6,12,.7)!important;color:var(--ink-4)!important;font-size:10px!important}
+  .leaflet-control-attribution a{color:var(--ink-3)!important}
+  .leaflet-bar a{background:var(--bg-node)!important;color:var(--text-body)!important;border-color:var(--line-hairline)!important}
+  .leaflet-bar a:hover{background:var(--bg-node-hover)!important;color:var(--text-primary)!important}
+  .map-hint{position:absolute;left:12px;bottom:12px;z-index:500;font-size:11px;color:var(--text-body);
+    background:rgba(3,6,12,.72);border:1px solid var(--line-hairline);border-radius:var(--radius-pill);padding:6px 13px;backdrop-filter:blur(8px);
+    display:flex;align-items:center;gap:7px;pointer-events:none;max-width:80%}
+  .map-hint .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan-400);box-shadow:0 0 8px var(--cyan-400);flex:none}
+
+  /* results */
   .tabs{display:flex;gap:6px;padding:12px 16px 0;flex-wrap:wrap}
   .tab{font:500 12px var(--font-core);letter-spacing:.02em;padding:7px 14px;border-radius:var(--radius-pill);border:1px solid var(--line-hairline);background:transparent;color:var(--text-muted);cursor:pointer}
   .tab.active{color:var(--cyan-100);border-color:var(--line-node);background:rgba(34,194,224,.14);box-shadow:var(--inner-top)}
   .tab:disabled{opacity:.45;cursor:not-allowed}
   .tab .soon{font-family:var(--font-mono);font-size:9px;opacity:.7;margin-left:5px}
-
-  .panel-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid var(--line-hairline);border-bottom:1px solid var(--line-hairline)}
-  .panel-head h2{margin:0;font-size:13px;font-weight:700;color:var(--text-primary);letter-spacing:.01em;display:flex;align-items:center;gap:8px}
-  .panel-head h2 .icon{color:var(--cyan-300)}
-  .ph-spacer{flex:1 1 auto}
-
+  .res-head{border-top:1px solid var(--line-hairline)}
   .results-body{flex:1 1 auto;overflow:auto;padding:14px 16px}
-  .empty{height:100%;min-height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;color:var(--text-muted)}
-  .empty .icon{width:40px;height:40px;color:var(--ink-4);stroke-width:1.6}
-  .empty p{margin:0;max-width:38ch;line-height:1.5}
+  .empty{height:100%;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;color:var(--text-muted)}
+  .empty .icon{width:38px;height:38px;color:var(--ink-4);stroke-width:1.6}
+  .empty p{margin:0;max-width:36ch;line-height:1.5}
   .empty code{font-family:var(--font-mono);font-size:12px;color:var(--cyan-200);background:rgba(34,194,224,.08);padding:2px 7px;border-radius:6px}
-
   .banner{margin:0 0 12px;padding:10px 14px;border-radius:var(--radius-md);font-size:13px;display:flex;gap:9px;align-items:flex-start}
   .banner .icon{width:17px;height:17px;flex:none;margin-top:1px}
   .banner.err{color:#ffd7d7;background:rgba(224,97,97,.10);border:1px solid rgba(224,97,97,.4)}
-  .banner.warn{color:var(--amber-400);background:rgba(230,172,94,.08);border:1px solid rgba(230,172,94,.35)}
 
   table{width:100%;border-collapse:collapse;font-size:13px}
   thead th{text-align:left;font:500 10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);padding:0 12px 10px;border-bottom:1px solid var(--line-hairline);position:sticky;top:0;background:var(--bg-panel)}
@@ -121,22 +121,19 @@
   .chip.comm{color:var(--amber-400);border-color:rgba(230,172,94,.4);background:rgba(230,172,94,.08)}
   .chip.vac{color:var(--ink-3);border-color:rgba(131,149,173,.35);background:rgba(131,149,173,.08)}
   .chip.ag{color:var(--mint-400);border-color:rgba(78,217,176,.4);background:rgba(78,217,176,.08)}
-  .adds{display:flex;flex-direction:column;gap:6px}
   .add{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .add-name{color:var(--text-body);font-weight:500}
   .add-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-muted)}
   .add-cost{font-family:var(--font-mono);font-size:12px;color:var(--cyan-300);font-variant-numeric:tabular-nums}
   .none{color:var(--ink-4);font-style:italic;font-size:12px}
-  .fgroup{margin-bottom:10px}
-  .fgroup:last-child{margin-bottom:0}
+  .fgroup{margin-bottom:10px}.fgroup:last-child{margin-bottom:0}
   .fg-label{display:inline-block;font:600 9px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px;padding:2px 8px;border-radius:var(--radius-pill);border:1px solid}
   .fg-label.g-add{color:var(--cyan-200);border-color:var(--line-node);background:rgba(34,194,224,.08)}
   .fg-label.g-bld{color:var(--violet-300);border-color:rgba(154,99,239,.4);background:rgba(154,99,239,.08)}
   .fg-label.g-com{color:var(--amber-400);border-color:rgba(230,172,94,.4);background:rgba(230,172,94,.08)}
   .fg-label.g-ag{color:var(--mint-400);border-color:rgba(78,217,176,.4);background:rgba(78,217,176,.08)}
   .rm{color:var(--ink-4);cursor:pointer;border:none;background:none;padding:2px;border-radius:6px;display:inline-flex}
-  .rm:hover{color:var(--cyan-300)}
-  .rm .icon{width:16px;height:16px}
+  .rm:hover{color:var(--cyan-300)}.rm .icon{width:16px;height:16px}
 
   footer{display:flex;gap:22px;flex-wrap:wrap;align-items:center;padding:12px 22px;border-top:1px solid var(--line-hairline);background:linear-gradient(0deg,rgba(10,16,29,.55),rgba(10,16,29,.15));backdrop-filter:blur(14px)}
   .stat{display:flex;flex-direction:column;gap:1px}
@@ -145,11 +142,38 @@
   .stat .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono)}
   .foot-note{margin-left:auto;font-size:11px;color:var(--cyan-300);max-width:44ch;text-align:right;display:flex;align-items:center;gap:7px}
   .foot-note .dot{width:7px;height:7px;border-radius:50%;background:var(--mint-400);box-shadow:0 0 8px var(--mint-400);flex:none}
-
-  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--void-500);border:1px solid var(--line-node);color:var(--cyan-100);padding:10px 18px;border-radius:var(--radius-pill);font-size:13px;box-shadow:var(--glow-md);transition:all .3s var(--ease);pointer-events:none;z-index:50}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--void-500);border:1px solid var(--line-node);color:var(--cyan-100);padding:10px 18px;border-radius:var(--radius-pill);font-size:13px;box-shadow:var(--glow-md);transition:all .3s var(--ease);pointer-events:none;z-index:9999}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-  @media (max-width:720px){.search input{width:150px}.foot-note{display:none}}
+  /* table / matrix modal */
+  .modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(3,6,12,.72);backdrop-filter:blur(4px)}
+  .modal[hidden]{display:none!important}
+  .modal-panel{background:var(--bg-panel);border:1px solid var(--line-hairline);border-radius:var(--radius-panel);box-shadow:var(--shadow-panel);max-width:96vw;max-height:90vh;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  .modal-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line-hairline)}
+  .modal-head h2{margin:0;font-size:15px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px}
+  .modal-head h2 .icon{color:var(--cyan-300)}
+  .modal-body{overflow:auto;padding:4px}
+  .modal-empty{padding:40px;text-align:center;color:var(--text-muted)}
+  .mtable{border-collapse:separate;border-spacing:0;font-size:12px;border:1px solid var(--mtable-grid)}
+  .mtable th,.mtable td{padding:8px 12px;border-right:1px solid var(--mtable-grid);border-bottom:1px solid var(--mtable-grid);text-align:right}
+  .mtable td{white-space:nowrap}
+  .mtable th{position:sticky;top:0;background:var(--bg-panel);font:600 10px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);z-index:1;white-space:normal;vertical-align:bottom;overflow-wrap:break-word}
+  .mtable th:not(.lft){max-width:150px;min-width:90px}
+  .mtable th.lft,.mtable td.lft{text-align:left}
+  .mtable td.addr{color:var(--text-primary);font-weight:600;position:sticky;left:0;background:var(--bg-panel);z-index:1}
+  .mtable th.stickyleft{position:sticky;left:0;z-index:2}
+  .mtable tbody tr:nth-child(even) td{background:rgba(255,255,255,.035)}
+  .mtable tbody tr:nth-child(even) td.addr{background:var(--void-600)}
+  .mtable tbody tr:hover td{background:rgba(63,216,240,.10)}
+  .mtable tbody tr:hover td.addr{background:var(--void-500)}
+  .mtable .num{font-family:var(--font-mono);color:var(--cyan-300);font-variant-numeric:tabular-nums}
+  .mtable .tot{color:var(--text-primary);font-weight:700}
+  .mtable .totrow td{border-top:1px solid var(--line-node);background:var(--bg-inset)}
+  .gdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .gdot.g-add{background:var(--cyan-300)} .gdot.g-bld{background:var(--violet-300)}
+  .gdot.g-com{background:var(--amber-400)} .gdot.g-ag{background:var(--mint-400)}
+
+  @media (max-width:900px){main{grid-template-columns:1fr;grid-auto-rows:minmax(320px,auto)}.app{height:auto;min-height:100vh}.search input{width:150px}.foot-note{display:none}}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -163,34 +187,43 @@
   <symbol id="ic-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
   <symbol id="ic-clear" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
   <symbol id="ic-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></symbol>
+  <symbol id="ic-box" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 3"/></symbol>
+  <symbol id="ic-poly" viewBox="0 0 24 24"><path d="m12 3 8.5 6.2-3.2 10H6.7l-3.2-10z"/><circle cx="12" cy="3" r="1.6" fill="currentColor"/><circle cx="20.5" cy="9.2" r="1.6" fill="currentColor"/><circle cx="3.5" cy="9.2" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="ic-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></symbol>
   <symbol id="ic-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
   <symbol id="ic-warn" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 20h16"/></symbol>
 </defs></svg>
 
 <div class="app">
   <header>
     <div class="brand">
       <div class="logo"><svg class="icon"><use href="#ic-map"/></svg></div>
-      <div>
-        <h1>MT<span>Matrix</span></h1>
-        <span class="eyebrow">Montana Cadastral · Property Features</span>
-      </div>
+      <div><h1>MT<span>Matrix</span></h1><span class="eyebrow">Montana Cadastral · Property Features</span></div>
     </div>
     <div class="bar-spacer"></div>
     <form class="search" id="searchForm">
-      <div class="inp">
-        <svg class="icon"><use href="#ic-search"/></svg>
-        <input id="geocode" name="geocode" placeholder="Enter a geocode…" autocomplete="off" spellcheck="false">
-      </div>
-      <div class="field">
-        <label for="taxyear">Tax year</label>
-        <select id="taxyear"><option>2026</option><option>2025</option><option>2024</option></select>
-      </div>
-      <button class="btn primary" id="goBtn" type="submit"><svg class="icon"><use href="#ic-plus"/></svg> Look up</button>
+      <div class="inp"><svg class="icon"><use href="#ic-search"/></svg>
+        <input id="geocode" name="geocode" placeholder="Enter a geocode…" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label for="taxyear">Tax year</label>
+        <select id="taxyear"><option>2026</option><option>2025</option><option>2024</option></select></div>
+      <button class="btn primary" id="goBtn" type="submit"><svg class="icon"><use href="#ic-search"/></svg> Look up</button>
     </form>
   </header>
 
   <main>
+    <section class="panel">
+      <div class="panel-head"><h2><svg class="icon"><use href="#ic-map"/></svg> Parcel Map</h2>
+        <div class="ph-spacer"></div>
+        <button class="btn" id="boxBtn"><svg class="icon"><use href="#ic-box"/></svg> Box</button>
+        <button class="btn" id="polyBtn"><svg class="icon"><use href="#ic-poly"/></svg> Polygon</button>
+      </div>
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div class="map-hint" id="mapHint"><span class="dot"></span> Search a geocode, or zoom in to load clickable parcels</div>
+      </div>
+    </section>
+
     <section class="panel">
       <div class="tabs">
         <button class="tab active">Features</button>
@@ -198,10 +231,10 @@
         <button class="tab" disabled>Owner<span class="soon">SOON</span></button>
         <button class="tab" disabled>Land<span class="soon">SOON</span></button>
       </div>
-      <div class="panel-head">
-        <h2><svg class="icon"><use href="#ic-rows"/></svg> Properties</h2>
+      <div class="panel-head res-head"><h2><svg class="icon"><use href="#ic-rows"/></svg> Properties</h2>
         <div class="ph-spacer"></div>
-        <button class="btn" id="copyBtn"><svg class="icon"><use href="#ic-copy"/></svg> Copy table</button>
+        <button class="btn" id="tableBtn"><svg class="icon"><use href="#ic-grid"/></svg> Table</button>
+        <button class="btn" id="copyBtn"><svg class="icon"><use href="#ic-copy"/></svg> Copy</button>
         <button class="btn" id="clearBtn"><svg class="icon"><use href="#ic-clear"/></svg> Clear</button>
       </div>
       <div class="results-body" id="results"></div>
@@ -216,131 +249,430 @@
   </footer>
 </div>
 
+<div class="modal" id="tableModal" hidden>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2><svg class="icon"><use href="#ic-grid"/></svg> Feature Matrix</h2>
+      <div class="ph-spacer"></div>
+      <button class="btn" id="mtCopy"><svg class="icon"><use href="#ic-copy"/></svg> Copy</button>
+      <button class="btn" id="mtCsv"><svg class="icon"><use href="#ic-download"/></svg> CSV</button>
+      <button class="btn" id="mtClose"><svg class="icon"><use href="#ic-close"/></svg> Close</button>
+    </div>
+    <div class="modal-body" id="mtBody"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function(){
   "use strict";
-  var rows = [];            // accumulated properties (client-side)
+  var rows = [];
   var lastError = null;
+  var MINZOOM = 16;
 
   var $ = function(id){ return document.getElementById(id); };
   var results = $("results"), toast = $("toast");
   var money = function(n){ return "$" + (Number(n)||0).toLocaleString("en-US"); };
   var esc = function(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); };
-
+  var norm = function(g){ return String(g||"").replace(/-/g,"").toUpperCase(); };
   function showToast(msg){ toast.textContent=msg; toast.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(function(){toast.classList.remove("show");},2400); }
+  function setHint(msg){ $("mapHint").innerHTML='<span class="dot"></span> '+esc(msg); }
 
-  // Feature groups, in display order, with their label color class.
+  // ---------- Map ----------
+  var map = L.map("map",{zoomControl:true,attributionControl:true}).setView([45.7833,-108.5007],14);
+  // Esri dark-gray canvas — keyless, dark, good match for the theme.
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",{
+    maxZoom:20, maxNativeZoom:16, attribution:"Tiles &copy; Esri"
+  }).addTo(map);
+  // Street/place labels on top of the base (also keyless).
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",{
+    maxZoom:20, maxNativeZoom:16
+  }).addTo(map);
+  setTimeout(function(){ map.invalidateSize(); },200);
+  window.addEventListener("resize", function(){ map.invalidateSize(); });
+
+  function selSet(){ var s={}; rows.forEach(function(r){ s[norm(r.property.geocode)]=true; }); return s; }
+  function parcelStyle(feat){
+    var sel = selSet()[norm(feat.properties.PARCELID)];
+    return sel
+      ? {color:"#6ae6f7",weight:2,opacity:1,fillColor:"#22c2e0",fillOpacity:0.25}
+      : {color:"#3fd8f0",weight:0.8,opacity:0.35,fillColor:"#1e2942",fillOpacity:0.05};
+  }
+  var parcelLayer = L.geoJSON(null,{
+    style:parcelStyle,
+    onEachFeature:function(feat,layer){
+      layer.on("click",function(){
+        if(tool!=="none") return;               // don't toggle while drawing a box/polygon
+        var pid=feat.properties.PARCELID;
+        if(rows.some(function(r){return norm(r.property.geocode)===norm(pid);})) removeByPid(pid);
+        else addProperty(pid,false);
+      });
+      layer.on("mouseover",function(){ layer.setStyle({weight:1.6,opacity:.85}); });
+      layer.on("mouseout",function(){ layer.setStyle(parcelStyle(feat)); });
+    }
+  }).addTo(map);
+  function restyle(){ parcelLayer.setStyle(parcelStyle); }
+
+  var loadTimer=null;
+  function scheduleLoad(){ clearTimeout(loadTimer); loadTimer=setTimeout(loadParcelsInView,350); }
+  async function loadParcelsInView(){
+    if(map.getZoom() < MINZOOM){ parcelLayer.clearLayers(); setHint("Zoom in to load clickable parcels"); return; }
+    var b=map.getBounds();
+    var bbox=[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].join(",");
+    setHint("Loading parcels…");
+    try{
+      var res=await fetch("/api/parcels?bbox="+encodeURIComponent(bbox));
+      var fc=await res.json();
+      if(!res.ok){ setHint(fc.error||"Could not load parcels"); return; }
+      parcelLayer.clearLayers();
+      parcelLayer.addData(fc);
+      restyle();
+      var n=(fc.features||[]).length;
+      setHint(n+" parcel"+(n===1?"":"s")+" in view"+(fc.exceededTransferLimit?" (zoom in for all)":"")+" · click to add");
+    }catch(e){ setHint("Could not load parcels"); }
+  }
+  map.on("moveend", scheduleLoad);
+
+  async function flyToGeocode(geocode){
+    try{
+      var res=await fetch("/api/parcel?geocode="+encodeURIComponent(geocode));
+      var fc=await res.json();
+      if(res.ok && fc.features && fc.features.length){
+        var gj=L.geoJSON(fc);
+        map.fitBounds(gj.getBounds(),{maxZoom:18,padding:[30,30]});
+      }else{ showToast("Found the record, but no map shape for this parcel"); }
+    }catch(e){}
+  }
+
+  // ---------- Data ----------
   var GROUPS = [
-    ["Dwelling Additions","g-add"],
-    ["Buildings & Improvements","g-bld"],
-    ["Commercial Buildings","g-com"],
-    ["Ag / Forest Land","g-ag"]
+    ["Dwelling Additions","g-add"],["Buildings & Improvements","g-bld"],
+    ["Commercial Buildings","g-com"],["Ag / Forest Land","g-ag"]
   ];
-
   function featuresHtml(feats){
     if(!feats || feats.length===0) return '<span class="none">— no features on record —</span>';
-    var out = "";
+    var out="";
     GROUPS.forEach(function(g){
-      var items = feats.filter(function(f){ return f.group===g[0]; });
+      var items=feats.filter(function(f){return f.group===g[0];});
       if(!items.length) return;
-      out += '<div class="fgroup"><span class="fg-label '+g[1]+'">'+esc(g[0])+'</span>';
-      out += items.map(function(f){
+      out+='<div class="fgroup"><span class="fg-label '+g[1]+'">'+esc(g[0])+'</span>';
+      out+=items.map(function(f){
         return '<div class="add"><span class="add-name">'+esc(f.description)+'</span>'
-          + (f.area!=null?'<span class="add-meta">'+esc(f.area)+' '+esc(f.areaUnit||'sf')+'</span>':'')
-          + (f.cost!=null?'<span class="add-cost">'+money(f.cost)+'</span>':'')+'</div>';
+          +(f.area!=null?'<span class="add-meta">'+esc(f.area)+' '+esc(f.areaUnit||"sf")+'</span>':'')
+          +(f.cost!=null?'<span class="add-cost">'+money(f.cost)+'</span>':'')+'</div>';
       }).join("");
-      out += '</div>';
+      out+='</div>';
     });
     return out;
   }
 
   function render(){
-    // footer totals — count every feature across all groups
     var featCount=0, featCost=0;
     rows.forEach(function(r){ (r.features||[]).forEach(function(f){ featCount++; featCost+=Number(f.cost)||0; }); });
-    $("stProps").textContent = rows.length;
-    $("stFeats").textContent = featCount;
-    $("stCost").textContent = money(featCost);
+    $("stProps").textContent=rows.length;
+    $("stFeats").textContent=featCount;
+    $("stCost").textContent=money(featCost);
 
-    var html = "";
-    if(lastError){ html += '<div class="banner err"><svg class="icon"><use href="#ic-warn"/></svg><span>'+esc(lastError)+'</span></div>'; }
-
+    var html="";
+    if(lastError){ html+='<div class="banner err"><svg class="icon"><use href="#ic-warn"/></svg><span>'+esc(lastError)+'</span></div>'; }
     if(rows.length===0){
-      html += '<div class="empty"><svg class="icon"><use href="#ic-target"/></svg>'
-        + '<p>Enter a Montana <strong style="color:var(--text-body)">geocode</strong> above to pull its real property features — dwelling additions, outbuildings, commercial buildings, and ag/forest land.</p>'
-        + '<p>Try <code>03-0926-11-4-09-28-0D18</code></p></div>';
-      results.innerHTML = html;
-      wire();
-      return;
+      html+='<div class="empty"><svg class="icon"><use href="#ic-target"/></svg>'
+        +'<p>Search a <strong style="color:var(--text-body)">geocode</strong>, or click parcels on the map, to pull their real features. Each one stacks here.</p>'
+        +'<p>Try <code>03-0926-11-4-09-28-0D18</code></p></div>';
+      results.innerHTML=html; wire(); return;
     }
-
-    html += '<table><thead><tr><th>Address</th><th>Geocode</th><th>Type</th><th>Features</th><th></th></tr></thead><tbody>';
+    html+='<table><thead><tr><th>Address</th><th>Geocode</th><th>Type</th><th>Features</th><th></th></tr></thead><tbody>';
     rows.forEach(function(r,i){
-      var cls = r.property.cls || "res";
-      html += '<tr>'
-        + '<td class="addr">'+esc(r.property.address)+'<small>'+esc(r.property.cityStateZip)+'</small></td>'
-        + '<td class="geo">'+esc(r.property.geocode)+'</td>'
-        + '<td><span class="chip '+cls+'">'+esc(r.property.propertyType)+'</span></td>'
-        + '<td>'+featuresHtml(r.features)+'</td>'
-        + '<td><button class="rm" data-rm="'+i+'" title="Remove" aria-label="Remove"><svg class="icon"><use href="#ic-close"/></svg></button></td>'
-        + '</tr>';
+      var cls=r.property.cls||"res";
+      html+='<tr>'
+        +'<td class="addr">'+esc(r.property.address)+'<small>'+esc(r.property.cityStateZip)+'</small></td>'
+        +'<td class="geo">'+esc(r.property.geocode)+'</td>'
+        +'<td><span class="chip '+cls+'">'+esc(r.property.propertyType)+'</span></td>'
+        +'<td>'+featuresHtml(r.features)+'</td>'
+        +'<td><button class="rm" data-rm="'+i+'" title="Remove"><svg class="icon"><use href="#ic-close"/></svg></button></td>'
+        +'</tr>';
     });
-    html += '</tbody></table>';
-    results.innerHTML = html;
-    wire();
+    html+='</tbody></table>';
+    results.innerHTML=html; wire();
   }
-
   function wire(){
-    var btns = results.querySelectorAll("[data-rm]");
-    btns.forEach(function(b){ b.addEventListener("click", function(){ rows.splice(+b.dataset.rm,1); render(); }); });
+    results.querySelectorAll("[data-rm]").forEach(function(b){
+      b.addEventListener("click",function(){ rows.splice(+b.dataset.rm,1); render(); restyle(); });
+    });
   }
-
   function setLoading(on){
-    var btn=$("goBtn");
-    btn.disabled = on;
-    btn.innerHTML = on ? '<span class="spinner"></span> Looking up…' : '<svg class="icon"><use href="#ic-plus"/></svg> Look up';
+    var btn=$("goBtn"); btn.disabled=on;
+    btn.innerHTML = on ? '<span class="spinner"></span> Looking up…' : '<svg class="icon"><use href="#ic-search"/></svg> Look up';
   }
 
-  $("searchForm").addEventListener("submit", async function(e){
-    e.preventDefault();
-    var geocode = $("geocode").value.trim();
-    var taxYear = $("taxyear").value;
+  async function addProperty(geocode, fly){
+    geocode=String(geocode||"").trim();
     if(!geocode){ showToast("Enter a geocode first"); return; }
-    lastError = null;
-    setLoading(true);
-    try{
-      var res = await fetch("/api/slice?geocode="+encodeURIComponent(geocode)+"&taxYear="+encodeURIComponent(taxYear));
-      var data = await res.json();
-      if(!res.ok){ lastError = data.error || ("Lookup failed ("+res.status+")"); render(); return; }
-      // replace if this geocode is already in the table, else add to top
-      var existing = rows.findIndex(function(r){ return r.property.geocode===data.property.geocode; });
-      if(existing>=0) rows.splice(existing,1);
-      rows.unshift(data);
-      if(data.warnings && data.warnings.length) showToast(data.warnings[0]);
-      else showToast("Added "+data.property.address);
-      $("geocode").value="";
-    }catch(err){
-      lastError = "Couldn't reach the MTMatrix server. Is it running?";
-    }finally{
-      setLoading(false);
-      render();
+    if(rows.some(function(r){return norm(r.property.geocode)===norm(geocode);})){
+      showToast("Already in the list"); if(fly) flyToGeocode(geocode); return;
     }
+    var taxYear=$("taxyear").value;
+    lastError=null; setLoading(true);
+    try{
+      var res=await fetch("/api/slice?geocode="+encodeURIComponent(geocode)+"&taxYear="+encodeURIComponent(taxYear));
+      var data=await res.json();
+      if(!res.ok){ lastError=data.error||("Lookup failed ("+res.status+")"); render(); return; }
+      rows.unshift(data);
+      if(data.warnings && data.warnings.length) showToast(data.warnings[0]); else showToast("Added "+data.property.address);
+      render(); restyle();
+      if(fly) flyToGeocode(geocode);
+    }catch(e){ lastError="Couldn't reach the MTMatrix server. Is it running?"; render(); }
+    finally{ setLoading(false); }
+  }
+
+  // Remove a property from the list by its geocode/PARCELID (click a selected parcel to toggle off).
+  function removeByPid(pid){
+    var idx=rows.findIndex(function(r){ return norm(r.property.geocode)===norm(pid); });
+    if(idx<0) return;
+    var addr=rows[idx].property.address;
+    rows.splice(idx,1);
+    render(); restyle();
+    showToast("Removed "+addr);
+  }
+
+  $("searchForm").addEventListener("submit",function(e){
+    e.preventDefault();
+    var g=$("geocode").value.trim();
+    if(g){ addProperty(g,true); $("geocode").value=""; }
   });
-
-  $("clearBtn").addEventListener("click", function(){ rows=[]; lastError=null; render(); });
-
-  $("copyBtn").addEventListener("click", async function(){
+  $("clearBtn").addEventListener("click",function(){ rows=[]; lastError=null; render(); restyle(); });
+  $("copyBtn").addEventListener("click",async function(){
     if(!rows.length){ showToast("Look up a property first"); return; }
-    var lines = [["Address","City/State/Zip","Geocode","Type","Feature group","Feature","Area","Cost"].join("\t")];
+    var lines=[["Address","City/State/Zip","Geocode","Type","Feature group","Feature","Area","Cost"].join("\t")];
     rows.forEach(function(r){
       var p=r.property;
       if(!r.features || r.features.length===0) lines.push([p.address,p.cityStateZip,p.geocode,p.propertyType,"","(none)","",""].join("\t"));
       else r.features.forEach(function(f){ lines.push([p.address,p.cityStateZip,p.geocode,p.propertyType,f.group,f.description,f.area==null?"":(f.area+" "+(f.areaUnit||"")),f.cost==null?"":f.cost].join("\t")); });
     });
     try{ await navigator.clipboard.writeText(lines.join("\n")); showToast("Copied "+rows.length+" properties"); }
-    catch(err){ showToast("Copy blocked by browser"); }
+    catch(e){ showToast("Copy blocked by browser"); }
+  });
+
+  // ---------- Area-select tools: box (drag) + polygon (click points) ----------
+  async function addMany(pids){
+    var fresh=pids.filter(function(p){ return p && !rows.some(function(r){return norm(r.property.geocode)===norm(p);}); });
+    if(!fresh.length){ showToast("Those parcels are already in the list"); return; }
+    var CAP=25;
+    if(fresh.length>CAP){ showToast("Selected "+fresh.length+" — loading the first "+CAP); fresh=fresh.slice(0,CAP); }
+    var taxYear=$("taxyear").value, added=0, i=0;
+    setHint("Loading "+fresh.length+" parcels…");
+    async function worker(){
+      while(i<fresh.length){
+        var pid=fresh[i++];
+        try{
+          var res=await fetch("/api/slice?geocode="+encodeURIComponent(pid)+"&taxYear="+encodeURIComponent(taxYear));
+          var data=await res.json();
+          if(res.ok){ rows.unshift(data); added++; }
+        }catch(e){}
+      }
+    }
+    await Promise.all(Array.from({length:Math.min(8,fresh.length)},worker));
+    render(); restyle();
+    showToast("Added "+added+" propert"+(added===1?"y":"ies"));
+    setHint("Click, box, or draw a polygon to add parcels");
+  }
+
+  // Ray-casting point-in-polygon (lng=x, lat=y). ring = array of L.latLng.
+  function pointInPoly(pt, ring){
+    var x=pt.lng, y=pt.lat, inside=false;
+    for(var i=0,j=ring.length-1;i<ring.length;j=i++){
+      var xi=ring[i].lng, yi=ring[i].lat, xj=ring[j].lng, yj=ring[j].lat;
+      var hit=((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/((yj-yi)||1e-12)+xi);
+      if(hit) inside=!inside;
+    }
+    return inside;
+  }
+  // Test each parcel by the center of the shape Leaflet actually renders — its
+  // visible footprint (the outer ring). This ignores any shared common-area ring
+  // that a condo/townhome unit record may carry, so selection matches what you see.
+  function parcelPoint(layer){
+    try{ if(typeof layer.getCenter==="function") return layer.getCenter(); }catch(e){}
+    return layer.getBounds().getCenter();
+  }
+  function collectAndAdd(testFn, emptyMsg){
+    var pids=[];
+    parcelLayer.eachLayer(function(layer){
+      try{
+        if(layer.feature && layer.feature.properties && testFn(parcelPoint(layer)))
+          pids.push(layer.feature.properties.PARCELID);
+      }catch(e){}
+    });
+    if(!pids.length){ showToast(emptyMsg); return; }
+    addMany(pids);
+  }
+
+  var STROKE={color:"#6ae6f7",weight:1.5,dashArray:"4 3",fillColor:"#22c2e0",fillOpacity:0.10,interactive:false};
+  var tool="none";
+  var boxBtn=$("boxBtn"), polyBtn=$("polyBtn");
+  var boxDrawing=false, boxStart=null, boxRect=null;      // box drag state
+  var polyPts=[], polyShape=null, polyMarks=null;          // polygon click state
+
+  function polyLabel(){
+    polyBtn.innerHTML = (tool==="poly")
+      ? '<svg class="icon"><use href="#ic-poly"/></svg> Finish ('+polyPts.length+')'
+      : '<svg class="icon"><use href="#ic-poly"/></svg> Polygon';
+  }
+  function setTool(t){
+    tool=t;
+    boxBtn.classList.toggle("primary", t==="box");
+    polyBtn.classList.toggle("primary", t==="poly");
+    polyLabel();
+    if(t==="none"){ map.dragging.enable(); map.doubleClickZoom.enable(); map.getContainer().style.cursor=""; }
+    else {
+      map.dragging.disable(); map.getContainer().style.cursor="crosshair";
+      if(t==="poly") map.doubleClickZoom.disable(); else map.doubleClickZoom.enable();
+    }
+  }
+  function clearBox(){ if(boxRect){ map.removeLayer(boxRect); boxRect=null; } boxStart=null; boxDrawing=false; }
+  function clearPoly(){ if(polyShape){ map.removeLayer(polyShape); polyShape=null; } if(polyMarks){ map.removeLayer(polyMarks); polyMarks=null; } polyPts=[]; }
+
+  boxBtn.addEventListener("click",function(){
+    var on=tool!=="box"; clearPoly(); setTool(on?"box":"none");
+    if(on) showToast("Box on — drag a rectangle over the parcels");
+  });
+  polyBtn.addEventListener("click",function(){
+    if(tool==="poly"){ finishPoly(); return; }
+    clearBox(); clearPoly(); setTool("poly");
+    polyMarks=L.layerGroup().addTo(map);
+    showToast("Polygon on — click each corner, then Finish (or double-click) to select");
+  });
+
+  function drawPoly(cursor){
+    var ll = cursor ? polyPts.concat([cursor]) : polyPts;
+    if(!ll.length) return;
+    if(!polyShape) polyShape=L.polygon([ll],STROKE).addTo(map);
+    else polyShape.setLatLngs([ll]);
+  }
+  function finishPoly(){
+    var ring=polyPts.slice();
+    clearPoly(); setTool("none");
+    if(ring.length<3){ showToast("Add at least 3 corners to make a shape"); return; }
+    collectAndAdd(function(c){ return pointInPoly(c, ring); }, "No parcels inside that shape — zoom in so parcels are loaded first");
+  }
+
+  // Box: press-drag-release
+  map.on("mousedown",function(e){
+    if(tool!=="box") return;
+    boxDrawing=true; boxStart=e.latlng;
+    boxRect=L.rectangle([boxStart,boxStart],STROKE).addTo(map);
+  });
+  map.on("mouseup",function(e){
+    if(tool!=="box" || !boxDrawing) return;
+    var b=L.latLngBounds(boxStart,e.latlng);
+    clearBox(); setTool("none");
+    collectAndAdd(function(c){ return b.contains(c); }, "No parcels in that box — zoom in so parcels are loaded first");
+  });
+  // Polygon: click each corner
+  map.on("click",function(e){
+    if(tool!=="poly") return;
+    polyPts.push(e.latlng);
+    L.circleMarker(e.latlng,{radius:3,color:"#6ae6f7",weight:2,fillColor:"#03060c",fillOpacity:1,interactive:false}).addTo(polyMarks);
+    drawPoly(); polyLabel();
+  });
+  map.on("dblclick",function(){ if(tool==="poly") finishPoly(); });
+  // Live preview
+  map.on("mousemove",function(e){
+    if(tool==="box" && boxDrawing && boxRect) boxRect.setBounds(L.latLngBounds(boxStart,e.latlng));
+    else if(tool==="poly" && polyPts.length) drawPoly(e.latlng);
+  });
+  // Esc cancels a polygon in progress
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape" && tool==="poly"){ clearPoly(); setTool("none"); showToast("Polygon cancelled"); }
+  });
+
+  // ---------- Table / feature matrix (popup): properties = rows, features = columns ----------
+  var GORDER={"Dwelling Additions":0,"Buildings & Improvements":1,"Commercial Buildings":2,"Ag / Forest Land":3};
+  var GCLS={"Dwelling Additions":"g-add","Buildings & Improvements":"g-bld","Commercial Buildings":"g-com","Ag / Forest Land":"g-ag"};
+  function matrixCols(){
+    var cols=[], seen={};
+    rows.forEach(function(r){ (r.features||[]).forEach(function(f){
+      var k=f.group+"|"+f.description;
+      if(!seen[k]){ seen[k]={group:f.group,desc:f.description,cls:GCLS[f.group]||"g-add"}; cols.push(seen[k]); }
+    }); });
+    cols.sort(function(a,b){ return ((GORDER[a.group]||0)-(GORDER[b.group]||0)) || a.desc.localeCompare(b.desc); });
+    return cols;
+  }
+  function cellFor(r,col){
+    var area=0,count=0,unit="sf",anyArea=false;
+    (r.features||[]).forEach(function(f){
+      if(f.group===col.group && f.description===col.desc){
+        count++;
+        if(f.area!=null){ area+=Number(f.area)||0; anyArea=true; }
+        if(f.areaUnit) unit=f.areaUnit;
+      }
+    });
+    return {area:area,count:count,unit:unit,anyArea:anyArea};
+  }
+  function cellDisp(v){
+    if(v.count===0) return "";
+    if(v.anyArea) return v.area.toLocaleString("en-US")+" "+v.unit+(v.count>1?" ×"+v.count:"");
+    return "✓"+(v.count>1?" ×"+v.count:"");
+  }
+  function openTable(){
+    if(!rows.length){ showToast("Look up some properties first"); return; }
+    var cols=matrixCols();
+    var h='<table class="mtable"><thead><tr>';
+    h+='<th class="lft stickyleft">Address</th><th class="lft">Geocode</th><th class="lft">Type</th>';
+    cols.forEach(function(c){ h+='<th title="'+esc(c.group)+'"><span class="gdot '+c.cls+'"></span>'+esc(c.desc)+'</th>'; });
+    h+='</tr></thead><tbody>';
+    rows.forEach(function(r){
+      h+='<tr><td class="addr lft">'+esc(r.property.address)+'</td><td class="lft geo">'+esc(r.property.geocode)+'</td><td class="lft"><span class="chip '+(r.property.cls||"res")+'">'+esc(r.property.propertyType)+'</span></td>';
+      cols.forEach(function(c){ h+='<td class="num">'+cellDisp(cellFor(r,c))+'</td>'; });
+      h+='</tr>';
+    });
+    h+='</tbody></table>';
+    $("mtBody").innerHTML=h;
+    $("tableModal").hidden=false;
+  }
+  function closeTable(){ $("tableModal").hidden=true; }
+
+  $("tableBtn").addEventListener("click",openTable);
+  $("mtClose").addEventListener("click",closeTable);
+  $("tableModal").addEventListener("click",function(e){ if(e.target===this) closeTable(); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !$("tableModal").hidden) closeTable(); });
+  $("mtCopy").addEventListener("click",async function(){
+    var cols=matrixCols();
+    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc+" (sf)";}));
+    var lines=[header.join("\t")];
+    rows.forEach(function(r){
+      var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
+      cols.forEach(function(c){ var v=cellFor(r,c); line.push(v.count===0?"":(v.anyArea?v.area:v.count)); });
+      lines.push(line.join("\t"));
+    });
+    try{ await navigator.clipboard.writeText(lines.join("\n")); showToast("Matrix copied to clipboard"); }
+    catch(e){ showToast("Copy blocked by browser"); }
+  });
+
+  function csvEsc(v){
+    var s=(v==null?"":String(v));
+    return /[",\r\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }
+  $("mtCsv").addEventListener("click",function(){
+    if(!rows.length){ showToast("Look up some properties first"); return; }
+    var cols=matrixCols();
+    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc+" (sf)";}));
+    var lines=[header.map(csvEsc).join(",")];
+    rows.forEach(function(r){
+      var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
+      cols.forEach(function(c){ var v=cellFor(r,c); line.push(v.count===0?"":(v.anyArea?v.area:v.count)); });
+      lines.push(line.map(csvEsc).join(","));
+    });
+    var d=new Date(), pad=function(n){return (n<10?"0":"")+n;};
+    var stamp=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+    var blob=new Blob(["﻿"+lines.join("\r\n")], {type:"text/csv;charset=utf-8;"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.href=url; a.download="mtmatrix-feature-matrix-"+stamp+".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    showToast("Downloaded "+rows.length+" properties as CSV");
   });
 
   render();
