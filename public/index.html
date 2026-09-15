@@ -256,6 +256,7 @@
       <div class="ph-spacer"></div>
       <button class="btn" id="mtCopy"><svg class="icon"><use href="#ic-copy"/></svg> Copy</button>
       <button class="btn" id="mtCsv"><svg class="icon"><use href="#ic-download"/></svg> CSV</button>
+      <button class="btn" id="mtXlsx"><svg class="icon"><use href="#ic-download"/></svg> Excel</button>
       <button class="btn" id="mtClose"><svg class="icon"><use href="#ic-close"/></svg> Close</button>
     </div>
     <div class="modal-body" id="mtBody"></div>
@@ -265,6 +266,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 (function(){
   "use strict";
@@ -351,6 +353,12 @@
     ["Dwelling Additions","g-add"],["Buildings & Improvements","g-bld"],
     ["Commercial Buildings","g-com"],["Ag / Forest Land","g-ag"]
   ];
+  // Measurement shown per feature: square footage (or acres) → dimensions → ✓.
+  function featMeasure(f){
+    if(f.area!=null) return esc(f.area)+' '+esc(f.areaUnit||"sf");
+    if(f.dims) return esc(f.dims);
+    return "✓";
+  }
   function featuresHtml(feats){
     if(!feats || feats.length===0) return '<span class="none">— no features on record —</span>';
     var out="";
@@ -360,8 +368,7 @@
       out+='<div class="fgroup"><span class="fg-label '+g[1]+'">'+esc(g[0])+'</span>';
       out+=items.map(function(f){
         return '<div class="add"><span class="add-name">'+esc(f.description)+'</span>'
-          +(f.area!=null?'<span class="add-meta">'+esc(f.area)+' '+esc(f.areaUnit||"sf")+'</span>':'')
-          +(f.cost!=null?'<span class="add-cost">'+money(f.cost)+'</span>':'')+'</div>';
+          +'<span class="add-meta">'+featMeasure(f)+'</span></div>';
       }).join("");
       out+='</div>';
     });
@@ -449,7 +456,7 @@
     rows.forEach(function(r){
       var p=r.property;
       if(!r.features || r.features.length===0) lines.push([p.address,p.cityStateZip,p.geocode,p.propertyType,"","(none)","",""].join("\t"));
-      else r.features.forEach(function(f){ lines.push([p.address,p.cityStateZip,p.geocode,p.propertyType,f.group,f.description,f.area==null?"":(f.area+" "+(f.areaUnit||"")),f.cost==null?"":f.cost].join("\t")); });
+      else r.features.forEach(function(f){ lines.push([p.address,p.cityStateZip,p.geocode,p.propertyType,f.group,f.description,f.area!=null?(f.area+" "+(f.areaUnit||"")):(f.dims||""),f.cost==null?"":f.cost].join("\t")); });
     });
     try{ await navigator.clipboard.writeText(lines.join("\n")); showToast("Copied "+rows.length+" properties"); }
     catch(e){ showToast("Copy blocked by browser"); }
@@ -600,20 +607,29 @@
     return cols;
   }
   function cellFor(r,col){
-    var area=0,count=0,unit="sf",anyArea=false;
+    var area=0,count=0,unit="sf",anyArea=false,dims=null;
     (r.features||[]).forEach(function(f){
       if(f.group===col.group && f.description===col.desc){
         count++;
         if(f.area!=null){ area+=Number(f.area)||0; anyArea=true; }
         if(f.areaUnit) unit=f.areaUnit;
+        if(f.dims && !dims) dims=f.dims; // fallback measurement when no area
       }
     });
-    return {area:area,count:count,unit:unit,anyArea:anyArea};
+    return {area:area,count:count,unit:unit,anyArea:anyArea,dims:dims};
   }
   function cellDisp(v){
     if(v.count===0) return "";
     if(v.anyArea) return v.area.toLocaleString("en-US")+" "+v.unit+(v.count>1?" ×"+v.count:"");
+    if(v.dims) return v.dims+(v.count>1?" ×"+v.count:"");
     return "✓"+(v.count>1?" ×"+v.count:"");
+  }
+  // Shared export value: area (number) → dims (string) → count fallback.
+  function cellExport(v,nullEmpty){
+    if(v.count===0) return nullEmpty?null:"";
+    if(v.anyArea) return v.area;
+    if(v.dims) return v.dims;
+    return v.count;
   }
   function openTable(){
     if(!rows.length){ showToast("Look up some properties first"); return; }
@@ -643,7 +659,7 @@
     var lines=[header.join("\t")];
     rows.forEach(function(r){
       var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
-      cols.forEach(function(c){ var v=cellFor(r,c); line.push(v.count===0?"":(v.anyArea?v.area:v.count)); });
+      cols.forEach(function(c){ line.push(cellExport(cellFor(r,c))); });
       lines.push(line.join("\t"));
     });
     try{ await navigator.clipboard.writeText(lines.join("\n")); showToast("Matrix copied to clipboard"); }
@@ -661,7 +677,7 @@
     var lines=[header.map(csvEsc).join(",")];
     rows.forEach(function(r){
       var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
-      cols.forEach(function(c){ var v=cellFor(r,c); line.push(v.count===0?"":(v.anyArea?v.area:v.count)); });
+      cols.forEach(function(c){ line.push(cellExport(cellFor(r,c))); });
       lines.push(line.map(csvEsc).join(","));
     });
     var d=new Date(), pad=function(n){return (n<10?"0":"")+n;};
@@ -673,6 +689,35 @@
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
     showToast("Downloaded "+rows.length+" properties as CSV");
+  });
+
+  $("mtXlsx").addEventListener("click",function(){
+    if(!rows.length){ showToast("Look up some properties first"); return; }
+    if(typeof XLSX==="undefined"){ showToast("Excel export unavailable (library didn't load)"); return; }
+    var cols=matrixCols();
+    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc+" (sf)";}));
+    var aoa=[header];
+    rows.forEach(function(r){
+      var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
+      cols.forEach(function(c){ line.push(cellExport(cellFor(r,c),true)); });
+      aoa.push(line);
+    });
+    var ws=XLSX.utils.aoa_to_sheet(aoa);
+    // Keep Geocode (column index 2) as text so leading zeros are preserved in Excel.
+    for(var i=1;i<aoa.length;i++){
+      var addr=XLSX.utils.encode_cell({r:i,c:2}), cell=ws[addr];
+      if(cell && cell.v!=null){ cell.t="s"; cell.v=String(cell.v); }
+    }
+    ws["!cols"]=header.map(function(h,idx){
+      var w = idx<4 ? Math.min(30, Math.max(12, h.length+2)) : Math.min(22, Math.max(10, h.length+2));
+      return {wch:w};
+    });
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Feature Matrix");
+    var d=new Date(), pad=function(n){return (n<10?"0":"")+n;};
+    var stamp=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+    XLSX.writeFile(wb, "mtmatrix-feature-matrix-"+stamp+".xlsx");
+    showToast("Downloaded "+rows.length+" properties as Excel");
   });
 
   render();
