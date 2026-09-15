@@ -156,7 +156,7 @@
   .modal-empty{padding:40px;text-align:center;color:var(--text-muted)}
   .mtable{border-collapse:separate;border-spacing:0;font-size:12px;border:1px solid var(--mtable-grid)}
   .mtable th,.mtable td{padding:8px 12px;border-right:1px solid var(--mtable-grid);border-bottom:1px solid var(--mtable-grid);text-align:right}
-  .mtable td{white-space:nowrap}
+  .mtable td{white-space:nowrap;vertical-align:top}
   .mtable th{position:sticky;top:0;background:var(--bg-panel);font:600 10px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);z-index:1;white-space:normal;vertical-align:bottom;overflow-wrap:break-word}
   .mtable th:not(.lft){max-width:150px;min-width:90px}
   .mtable th.lft,.mtable td.lft{text-align:left}
@@ -166,7 +166,7 @@
   .mtable tbody tr:nth-child(even) td.addr{background:var(--void-600)}
   .mtable tbody tr:hover td{background:rgba(63,216,240,.10)}
   .mtable tbody tr:hover td.addr{background:var(--void-500)}
-  .mtable .num{font-family:var(--font-mono);color:var(--cyan-300);font-variant-numeric:tabular-nums}
+  .mtable .num{font-family:var(--font-mono);color:var(--cyan-300);font-variant-numeric:tabular-nums;line-height:1.5}
   .mtable .tot{color:var(--text-primary);font-weight:700}
   .mtable .totrow td{border-top:1px solid var(--line-node);background:var(--bg-inset)}
   .gdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
@@ -664,30 +664,37 @@
     cols.sort(function(a,b){ return ((GORDER[a.group]||0)-(GORDER[b.group]||0)) || a.desc.localeCompare(b.desc); });
     return cols;
   }
+  function itemText(it){
+    if(it.area!=null) return it.area.toLocaleString("en-US")+" "+it.unit;
+    if(it.dims) return it.dims;
+    return "\u2713";
+  }
   function cellFor(r,col){
-    var area=0,count=0,unit="sf",anyArea=false,dims=null;
+    var area=0,count=0,unit="sf",anyArea=false,dims=null,items=[];
     (r.features||[]).forEach(function(f){
       if(f.group===col.group && f.description===col.desc){
         count++;
-        if(f.area!=null){ area+=Number(f.area)||0; anyArea=true; }
-        if(f.areaUnit) unit=f.areaUnit;
-        if(f.dims && !dims) dims=f.dims; // fallback measurement when no area
+        var u=f.areaUnit||"sf";
+        if(f.area!=null){ area+=Number(f.area)||0; anyArea=true; unit=u; items.push({area:Number(f.area)||0,unit:u,dims:null}); }
+        else if(f.dims){ if(!dims) dims=f.dims; items.push({area:null,unit:u,dims:f.dims}); }
+        else { items.push({area:null,unit:u,dims:null}); }
       }
     });
-    return {area:area,count:count,unit:unit,anyArea:anyArea,dims:dims};
+    return {area:area,count:count,unit:unit,anyArea:anyArea,dims:dims,items:items};
   }
+  // Table cell (HTML): stack each measurement on its own line; count prefix leads line 1.
   function cellDisp(v){
     if(v.count===0) return "";
-    if(v.anyArea) return v.area.toLocaleString("en-US")+" "+v.unit+(v.count>1?" ×"+v.count:"");
-    if(v.dims) return v.dims+(v.count>1?" ×"+v.count:"");
-    return "✓"+(v.count>1?" ×"+v.count:"");
+    var parts=v.items.map(itemText);
+    if(v.count===1) return parts[0];
+    return "\u00d7"+v.count+": "+parts[0]+"<br>"+parts.slice(1).join("<br>");
   }
-  // Shared export value: area (number) → dims (string) → count fallback.
+  // Export cell (plain text, single line): count prefix + comma-separated per-item, no summed total.
   function cellExport(v,nullEmpty){
     if(v.count===0) return nullEmpty?null:"";
-    if(v.anyArea) return v.area;
-    if(v.dims) return v.dims;
-    return v.count;
+    var parts=v.items.map(itemText);
+    if(v.count===1) return parts[0];
+    return "\u00d7"+v.count+": "+parts.join(", ");
   }
   function openTable(){
     if(!rows.length){ showToast("Look up some properties first"); return; }
@@ -713,7 +720,7 @@
   document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !$("tableModal").hidden) closeTable(); });
   $("mtCopy").addEventListener("click",async function(){
     var cols=matrixCols();
-    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc+" (sf)";}));
+    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc;}));
     var lines=[header.join("\t")];
     rows.forEach(function(r){
       var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
@@ -731,7 +738,7 @@
   $("mtCsv").addEventListener("click",function(){
     if(!rows.length){ showToast("Look up some properties first"); return; }
     var cols=matrixCols();
-    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc+" (sf)";}));
+    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc;}));
     var lines=[header.map(csvEsc).join(",")];
     rows.forEach(function(r){
       var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
@@ -753,7 +760,7 @@
     if(!rows.length){ showToast("Look up some properties first"); return; }
     if(typeof XLSX==="undefined"){ showToast("Excel export unavailable (library didn't load)"); return; }
     var cols=matrixCols();
-    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc+" (sf)";}));
+    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc;}));
     var aoa=[header];
     rows.forEach(function(r){
       var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
@@ -767,8 +774,10 @@
       if(cell && cell.v!=null){ cell.t="s"; cell.v=String(cell.v); }
     }
     ws["!cols"]=header.map(function(h,idx){
-      var w = idx<4 ? Math.min(30, Math.max(12, h.length+2)) : Math.min(22, Math.max(10, h.length+2));
-      return {wch:w};
+      var maxLen=h.length;
+      for(var ri=1;ri<aoa.length;ri++){ var cv=aoa[ri][idx]; if(cv!=null){ var L=String(cv).length; if(L>maxLen) maxLen=L; } }
+      var cap = idx<4 ? 30 : 40;
+      return {wch:Math.min(cap, Math.max(12, maxLen+2))};
     });
     var wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Feature Matrix");
