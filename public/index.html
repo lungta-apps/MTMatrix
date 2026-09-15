@@ -166,6 +166,11 @@
   .mtable tbody tr:nth-child(even) td.addr{background:var(--void-600)}
   .mtable tbody tr:hover td{background:rgba(63,216,240,.10)}
   .mtable tbody tr:hover td.addr{background:var(--void-500)}
+  .mtable tbody tr{cursor:pointer}
+  .mtable tbody tr.rowsel td{background:rgba(63,216,240,.18)}
+  .mtable tbody tr.rowsel td.addr{background:rgba(21,155,184,.34);box-shadow:inset 3px 0 0 #3fd8f0}
+  .mtable tbody tr.rowsel:hover td{background:rgba(63,216,240,.24)}
+  .mtable tbody tr.rowsel:hover td.addr{background:rgba(21,155,184,.42);box-shadow:inset 3px 0 0 #3fd8f0}
   .mtable .num{font-family:var(--font-mono);color:var(--cyan-300);font-variant-numeric:tabular-nums;line-height:1.5}
   .mtable .tot{color:var(--text-primary);font-weight:700}
   .mtable .totrow td{border-top:1px solid var(--line-node);background:var(--bg-inset)}
@@ -718,6 +723,13 @@
   $("mtClose").addEventListener("click",closeTable);
   $("tableModal").addEventListener("click",function(e){ if(e.target===this) closeTable(); });
   document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !$("tableModal").hidden) closeTable(); });
+  // Click a data row to toggle a persistent highlight (skips clicks that are text selections).
+  $("mtBody").addEventListener("click",function(e){
+    var tr=e.target.closest("tr");
+    if(!tr || !tr.parentElement || tr.parentElement.tagName!=="TBODY") return;
+    if(window.getSelection && String(window.getSelection())) return;
+    tr.classList.toggle("rowsel");
+  });
   $("mtCopy").addEventListener("click",async function(){
     var cols=matrixCols();
     var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc;}));
