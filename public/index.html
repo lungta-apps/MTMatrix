@@ -173,6 +173,13 @@
   .gdot.g-add{background:var(--cyan-300)} .gdot.g-bld{background:var(--violet-300)}
   .gdot.g-com{background:var(--amber-400)} .gdot.g-ag{background:var(--mint-400)}
 
+  .addr-item{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:11px 14px;border:1px solid var(--line-hairline);border-radius:var(--radius-md);background:var(--bg-node);color:var(--text-body);cursor:pointer;margin-bottom:8px;transition:all .15s var(--ease)}
+  .addr-item:last-child{margin-bottom:0}
+  .addr-item:hover{border-color:var(--line-node);background:var(--bg-node-hover)}
+  .addr-item .a1{font-weight:600;color:var(--text-primary)}
+  .addr-item .a2{font-size:12px;color:var(--text-muted)}
+  .addr-item .geo{font-family:var(--font-mono);font-size:11px;color:var(--cyan-300);margin-top:2px}
+
   @media (max-width:900px){main{grid-template-columns:1fr;grid-auto-rows:minmax(320px,auto)}.app{height:auto;min-height:100vh}.search input{width:150px}.foot-note{display:none}}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -204,7 +211,7 @@
     <div class="bar-spacer"></div>
     <form class="search" id="searchForm">
       <div class="inp"><svg class="icon"><use href="#ic-search"/></svg>
-        <input id="geocode" name="geocode" placeholder="Enter a geocode…" autocomplete="off" spellcheck="false"></div>
+        <input id="geocode" name="geocode" placeholder="Enter a geocode or address…" autocomplete="off" spellcheck="false"></div>
       <div class="field"><label for="taxyear">Tax year</label>
         <select id="taxyear"><option>2026</option><option>2025</option><option>2024</option></select></div>
       <button class="btn primary" id="goBtn" type="submit"><svg class="icon"><use href="#ic-search"/></svg> Look up</button>
@@ -220,7 +227,7 @@
       </div>
       <div class="map-wrap">
         <div id="map"></div>
-        <div class="map-hint" id="mapHint"><span class="dot"></span> Search a geocode, or zoom in to load clickable parcels</div>
+        <div class="map-hint" id="mapHint"><span class="dot"></span> Search a geocode or address, or zoom in to load clickable parcels</div>
       </div>
     </section>
 
@@ -260,6 +267,17 @@
       <button class="btn" id="mtClose"><svg class="icon"><use href="#ic-close"/></svg> Close</button>
     </div>
     <div class="modal-body" id="mtBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="addrModal" hidden>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2><svg class="icon"><use href="#ic-search"/></svg> Select an address</h2>
+      <div class="ph-spacer"></div>
+      <button class="btn" id="addrClose"><svg class="icon"><use href="#ic-close"/></svg> Close</button>
+    </div>
+    <div class="modal-body" id="addrBody"></div>
   </div>
 </div>
 
@@ -444,11 +462,51 @@
     showToast("Removed "+addr);
   }
 
+  // A geocode has no spaces, stays in [0-9A-Za-z-], and is digit-heavy; anything
+  // else (has a space, or few/no digits like a street name) is treated as an address.
+  function looksLikeGeocode(s){
+    if(/\s/.test(s)) return false;
+    if(!/^[0-9A-Za-z\-]+$/.test(s)) return false;
+    return (s.match(/\d/g)||[]).length >= 8;
+  }
+  function openAddrPicker(matches){
+    $("addrBody").innerHTML = matches.map(function(m){
+      return '<button class="addr-item" data-geo="'+esc(m.geocode)+'">'
+        +'<span class="a1">'+esc(m.address||"(no address on file)")+'</span>'
+        +(m.cityStateZip?'<span class="a2">'+esc(m.cityStateZip)+'</span>':'')
+        +'<span class="geo">'+esc(m.geocode)+'</span></button>';
+    }).join("");
+    $("addrBody").querySelectorAll(".addr-item").forEach(function(b){
+      b.addEventListener("click",function(){ closeAddr(); addProperty(b.dataset.geo,true); });
+    });
+    $("addrModal").hidden=false;
+  }
+  function closeAddr(){ $("addrModal").hidden=true; }
+  async function doAddressSearch(q){
+    setLoading(true);
+    try{
+      var res=await fetch("/api/address?q="+encodeURIComponent(q));
+      var data=await res.json();
+      if(!res.ok){ showToast(data.error||("Address search failed ("+res.status+")")); return; }
+      var m=data.matches||[];
+      if(m.length===0){ showToast("No parcels match that address"); return; }
+      if(m.length===1){ await addProperty(m[0].geocode,true); return; }
+      openAddrPicker(m);
+      if(data.exceededTransferLimit) showToast("Showing first "+m.length+" — refine the address to narrow");
+    }catch(e){ showToast("Couldn't reach the MTMatrix server. Is it running?"); }
+    finally{ setLoading(false); }
+  }
+
   $("searchForm").addEventListener("submit",function(e){
     e.preventDefault();
     var g=$("geocode").value.trim();
-    if(g){ addProperty(g,true); $("geocode").value=""; }
+    if(!g) return;
+    if(looksLikeGeocode(g)) addProperty(g,true); else doAddressSearch(g);
+    $("geocode").value="";
   });
+  $("addrClose").addEventListener("click",closeAddr);
+  $("addrModal").addEventListener("click",function(e){ if(e.target===this) closeAddr(); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !$("addrModal").hidden) closeAddr(); });
   $("clearBtn").addEventListener("click",function(){ rows=[]; lastError=null; render(); restyle(); });
   $("copyBtn").addEventListener("click",async function(){
     if(!rows.length){ showToast("Look up a property first"); return; }

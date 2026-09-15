@@ -107,7 +107,9 @@ async function safeArray(endpoint, params, label, warnings) {
 }
 
 // ---- feature normalizers: every source becomes the SAME shape ----
-// { group, description, area, areaUnit, cost, year }
+// { group, description, area, areaUnit, dims, cost, year }
+// `dims` is a fallback measurement string (e.g. "25 × 10 ft") used when a
+// line-item has no square footage but does carry width/length/height.
 
 function dwellingAdditionFeatures(dwellings) {
   const feats = [];
@@ -118,6 +120,7 @@ function dwellingAdditionFeatures(dwellings) {
         description: stripCode(a.firstDescription || a.first) || "(unlabeled)",
         area: a.area ?? null,
         areaUnit: "sf",
+        dims: null, // dwelling additions carry only area, no width/length/height
         cost: a.cost ?? null,
         year: a.year || null,
       });
@@ -134,11 +137,20 @@ function buildingFeatures(items) {
     const cost = rcn == null ? null : pct == null ? rcn : Math.round(rcn * pct);
     let desc = stripCode(b.improvementDescription || b.improvementCode) || "(improvement)";
     if (b.qty && b.qty > 1) desc += ` (×${b.qty})`;
+    // Many improvements (fences, some garages/concrete) have no total area but
+    // do carry width/length/height (in feet). Fall back to those dimensions.
+    const area = b.area || null;
+    let dims = null;
+    if (area == null) {
+      const parts = [b.width, b.length, b.height].map(Number).filter((v) => v > 0);
+      if (parts.length) dims = parts.join(" × ") + " ft";
+    }
     return {
       group: "Buildings & Improvements",
       description: desc,
-      area: b.area || null,
+      area,
       areaUnit: "sf",
+      dims,
       cost,
       year: b.yearBlt || null,
     };
@@ -156,6 +168,7 @@ function commercialFeatures(items) {
       description: desc,
       area: d.totalArea || null,
       areaUnit: "sf",
+      dims: null,
       cost: d.rcnld ?? null,
       year: d.yearBuilt || null,
     };
@@ -183,6 +196,7 @@ function agForestFeatures(s) {
         description: `${name} land`,
         area: acres || null,
         areaUnit: "acres",
+        dims: null,
         cost: value ?? null,
         year: null,
       });
@@ -393,6 +407,57 @@ app.get("/api/parcels", async (req, res) => {
     return res.json(fc);
   } catch (err) {
     return res.status(err.status || 502).json({ error: `Parcel map lookup failed (${err.message}).` });
+  }
+});
+
+// ADDRESS SEARCH: find parcels by street address via the ArcGIS parcels layer.
+// cadastralapi has NO address search (its Swagger Search takes countyId/ownerName/
+// geocode/etc., not an address), but ArcGIS layer 1 carries AddressLine1 /
+// AddressLine2 / CityStateZip attributes we can LIKE-match.
+app.get("/api/address", async (req, res) => {
+  const q = String(req.query.q || "").trim();
+  if (q.length < 3) {
+    return res.status(400).json({ error: "Enter at least 3 characters of an address." });
+  }
+  // Tokenize; strip anything unsafe in a LIKE (this also removes % and _ wildcards).
+  const tokens = q
+    .toUpperCase()
+    .split(/\s+/)
+    .map((t) => t.replace(/[^0-9A-Z#/\-]/g, ""))
+    .filter(Boolean)
+    .slice(0, 8);
+  if (!tokens.length) {
+    return res.status(400).json({ error: "Enter an address to search." });
+  }
+  const esc = (s) => s.replace(/'/g, "''");
+  const where = tokens
+    .map((t) => `(UPPER(AddressLine1) LIKE '%${esc(t)}%' OR UPPER(CityStateZip) LIKE '%${esc(t)}%')`)
+    .join(" AND ");
+  try {
+    const data = await arcgisFetch({
+      where,
+      outFields: "PARCELID,AddressLine1,AddressLine2,CityStateZip",
+      returnGeometry: "false",
+      resultRecordCount: "25",
+      orderByFields: "AddressLine1",
+      f: "json",
+    });
+    const seen = new Set();
+    const matches = (data.features || [])
+      .map((f) => f.attributes || {})
+      .filter((a) => a.PARCELID && !seen.has(a.PARCELID) && seen.add(a.PARCELID))
+      .map((a) => ({
+        geocode: a.PARCELID,
+        address: [a.AddressLine1, a.AddressLine2].map((s) => (s || "").trim()).filter(Boolean).join(" "),
+        cityStateZip: (a.CityStateZip || "").trim(),
+      }));
+    return res.json({
+      matches,
+      count: matches.length,
+      exceededTransferLimit: !!data.exceededTransferLimit,
+    });
+  } catch (err) {
+    return res.status(err.status || 502).json({ error: `Address lookup failed (${err.message}).` });
   }
 });
 
