@@ -142,6 +142,10 @@
   .stat .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono)}
   .foot-note{margin-left:auto;font-size:11px;color:var(--cyan-300);max-width:44ch;text-align:right;display:flex;align-items:center;gap:7px}
   .foot-note .dot{width:7px;height:7px;border-radius:50%;background:var(--mint-400);box-shadow:0 0 8px var(--mint-400);flex:none}
+  .foot-credit{margin-left:22px;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:.03em;white-space:nowrap;display:flex;align-items:center;gap:8px}
+  .foot-credit a{color:var(--cyan-300);text-decoration:none}
+  .foot-credit a:hover{text-decoration:underline}
+  .foot-credit .sep{opacity:.5}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--void-500);border:1px solid var(--line-node);color:var(--cyan-100);padding:10px 18px;border-radius:var(--radius-pill);font-size:13px;box-shadow:var(--glow-md);transition:all .3s var(--ease);pointer-events:none;z-index:9999}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -154,6 +158,12 @@
   .modal-head h2 .icon{color:var(--cyan-300)}
   .modal-body{overflow:auto;padding:4px}
   .modal-empty{padding:40px;text-align:center;color:var(--text-muted)}
+  /* Floating, non-blocking table window: no scrim, map stays live, drag by the header, resize from the corner. */
+  .modal.floating{position:fixed;inset:0;z-index:1000;display:block;padding:0;background:none;backdrop-filter:none;pointer-events:none}
+  .modal.floating .modal-panel{position:absolute;pointer-events:auto;width:min(760px,46vw);height:70vh;max-width:96vw;max-height:88vh;min-width:340px;min-height:220px;resize:both}
+  .modal.floating .modal-head{cursor:move;user-select:none}
+  .modal.floating .modal-head .btn{cursor:pointer}
+  .modal.floating .modal-body{flex:1 1 auto;min-height:0}
   .mtable{border-collapse:separate;border-spacing:0;font-size:12px;border:1px solid var(--mtable-grid)}
   .mtable th,.mtable td{padding:8px 12px;border-right:1px solid var(--mtable-grid);border-bottom:1px solid var(--mtable-grid);text-align:right}
   .mtable td{white-space:nowrap;vertical-align:top}
@@ -258,10 +268,11 @@
     <div class="stat"><span class="v accent" id="stFeats">0</span><span class="k">Features</span></div>
     <div class="stat"><span class="v" id="stCost">$0</span><span class="k">Est. value</span></div>
     <div class="foot-note"><span class="dot"></span> Live data from Montana Cadastral · value is a rough estimate</div>
+    <div class="foot-credit">&copy; 2026 Bobbi Johnson <span class="sep">·</span> <a href="https://bobbijohnson.dev" target="_blank" rel="noopener">bobbijohnson.dev</a></div>
   </footer>
 </div>
 
-<div class="modal" id="tableModal" hidden>
+<div class="modal floating" id="tableModal" hidden>
   <div class="modal-panel">
     <div class="modal-head">
       <h2><svg class="icon"><use href="#ic-grid"/></svg> Feature Matrix</h2>
@@ -716,8 +727,40 @@
     h+='</tbody></table>';
     $("mtBody").innerHTML=h;
     $("tableModal").hidden=false;
+    if(window.__mtPositionPanel) window.__mtPositionPanel();
   }
   function closeTable(){ $("tableModal").hidden=true; }
+  // Make the Feature Matrix a movable, non-blocking window (drag by header, keeps position across opens).
+  (function(){
+    var tm=$("tableModal"), panel=tm.querySelector(".modal-panel"), head=panel.querySelector(".modal-head"), drag=null;
+    function clamp(){
+      var w=panel.offsetWidth, h=panel.offsetHeight;
+      var maxL=Math.max(0, window.innerWidth-w), maxT=Math.max(0, window.innerHeight-h);
+      var l=parseFloat(panel.style.left)||0, t=parseFloat(panel.style.top)||0;
+      panel.style.left=Math.min(Math.max(0,l),maxL)+"px";
+      panel.style.top=Math.min(Math.max(0,t),maxT)+"px";
+    }
+    window.__mtPositionPanel=function(){
+      if(panel.style.left && panel.style.top){ clamp(); return; }
+      var w=panel.offsetWidth||600;
+      panel.style.left=Math.max(12, window.innerWidth - w - 20)+"px";
+      panel.style.top="88px";
+      clamp();
+    };
+    head.addEventListener("mousedown",function(e){
+      if(e.target.closest("button")) return;
+      var r=panel.getBoundingClientRect();
+      drag={dx:e.clientX-r.left, dy:e.clientY-r.top};
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove",function(e){
+      if(!drag) return;
+      panel.style.left=(e.clientX-drag.dx)+"px";
+      panel.style.top=(e.clientY-drag.dy)+"px";
+    });
+    window.addEventListener("mouseup",function(){ if(drag){ drag=null; clamp(); } });
+    window.addEventListener("resize",function(){ if(!tm.hidden) clamp(); });
+  })();
 
   $("tableBtn").addEventListener("click",openTable);
   $("mtClose").addEventListener("click",closeTable);
