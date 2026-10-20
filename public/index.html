@@ -215,6 +215,8 @@
   <symbol id="ic-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
   <symbol id="ic-warn" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
   <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 20h16"/></symbol>
+  <symbol id="ic-popout" viewBox="0 0 24 24"><path d="M14 3h7v7"/><path d="M21 3l-9 9"/><path d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></symbol>
+  <symbol id="ic-dock" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></symbol>
 </defs></svg>
 
 <div class="app">
@@ -280,6 +282,7 @@
       <button class="btn" id="mtCopy"><svg class="icon"><use href="#ic-copy"/></svg> Copy</button>
       <button class="btn" id="mtCsv"><svg class="icon"><use href="#ic-download"/></svg> CSV</button>
       <button class="btn" id="mtXlsx"><svg class="icon"><use href="#ic-download"/></svg> Excel</button>
+      <button class="btn" id="mtPop" title="Open the table in its own window — drag it to another monitor or snap it beside the map"><svg class="icon"><use href="#ic-popout"/></svg> Pop out</button>
       <button class="btn" id="mtClose"><svg class="icon"><use href="#ic-close"/></svg> Close</button>
     </div>
     <div class="modal-body" id="mtBody"></div>
@@ -422,7 +425,7 @@
       html+='<div class="empty"><svg class="icon"><use href="#ic-target"/></svg>'
         +'<p>Search a <strong style="color:var(--text-body)">geocode</strong>, or click parcels on the map, to pull their real features. Each one stacks here.</p>'
         +'<p>Try <code>03-0926-11-4-09-28-0D18</code></p></div>';
-      results.innerHTML=html; wire(); return;
+      results.innerHTML=html; wire(); syncMatrix(); return;
     }
     html+='<table><thead><tr><th>Address</th><th>Geocode</th><th>Type</th><th>Features</th><th></th></tr></thead><tbody>';
     rows.forEach(function(r,i){
@@ -436,7 +439,7 @@
         +'</tr>';
     });
     html+='</tbody></table>';
-    results.innerHTML=html; wire();
+    results.innerHTML=html; wire(); syncMatrix();
   }
   function wire(){
     results.querySelectorAll("[data-rm]").forEach(function(b){
@@ -712,20 +715,29 @@
     if(v.count===1) return parts[0];
     return "\u00d7"+v.count+": "+parts.join(", ");
   }
-  function openTable(){
-    if(!rows.length){ showToast("Look up some properties first"); return; }
+  // Bookmarked rows (cyan place-keeper), keyed by hyphen-less geocode so they survive re-renders and sync across windows.
+  var marked={};
+  // The popped-out table window (its own browser window — can live on another monitor).
+  var popWin=null;
+  function matrixHtml(){
+    if(!rows.length) return '<div class="modal-empty">No properties yet. Click parcels on the map or search to add them; this table updates as you go.</div>';
     var cols=matrixCols();
     var h='<table class="mtable"><thead><tr>';
     h+='<th class="lft stickyleft">Address</th><th class="lft">Geocode</th><th class="lft">Type</th>';
     cols.forEach(function(c){ h+='<th title="'+esc(c.group)+'"><span class="gdot '+c.cls+'"></span>'+esc(c.desc)+'</th>'; });
     h+='</tr></thead><tbody>';
     rows.forEach(function(r){
-      h+='<tr><td class="addr lft">'+esc(r.property.address)+'</td><td class="lft geo">'+esc(r.property.geocode)+'</td><td class="lft"><span class="chip '+(r.property.cls||"res")+'">'+esc(r.property.propertyType)+'</span></td>';
+      var g=norm(r.property.geocode);
+      h+='<tr data-g="'+esc(g)+'"'+(marked[g]?' class="rowsel"':'')+'><td class="addr lft">'+esc(r.property.address)+'</td><td class="lft geo">'+esc(r.property.geocode)+'</td><td class="lft"><span class="chip '+(r.property.cls||"res")+'">'+esc(r.property.propertyType)+'</span></td>';
       cols.forEach(function(c){ h+='<td class="num">'+cellDisp(cellFor(r,c))+'</td>'; });
       h+='</tr>';
     });
     h+='</tbody></table>';
-    $("mtBody").innerHTML=h;
+    return h;
+  }
+  function openTable(){
+    if(!rows.length){ showToast("Look up some properties first"); return; }
+    $("mtBody").innerHTML=matrixHtml();
     $("tableModal").hidden=false;
     if(window.__mtPositionPanel) window.__mtPositionPanel();
   }
@@ -762,66 +774,58 @@
     window.addEventListener("resize",function(){ if(!tm.hidden) clamp(); });
   })();
 
-  $("tableBtn").addEventListener("click",openTable);
-  $("mtClose").addEventListener("click",closeTable);
-  $("tableModal").addEventListener("click",function(e){ if(e.target===this) closeTable(); });
-  document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !$("tableModal").hidden) closeTable(); });
-  // Click a data row to toggle a persistent highlight (skips clicks that are text selections).
-  $("mtBody").addEventListener("click",function(e){
-    var tr=e.target.closest("tr");
-    if(!tr || !tr.parentElement || tr.parentElement.tagName!=="TBODY") return;
-    if(window.getSelection && String(window.getSelection())) return;
-    tr.classList.toggle("rowsel");
-  });
-  $("mtCopy").addEventListener("click",async function(){
+  // ---------- Exports (shared by the in-page table and the pop-out window; tw = the window the click came from) ----------
+  function matrixAoa(nullEmpty){
     var cols=matrixCols();
-    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc;}));
-    var lines=[header.join("\t")];
+    var aoa=[["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc;}))];
     rows.forEach(function(r){
       var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
-      cols.forEach(function(c){ line.push(cellExport(cellFor(r,c))); });
-      lines.push(line.join("\t"));
+      cols.forEach(function(c){ line.push(cellExport(cellFor(r,c),nullEmpty)); });
+      aoa.push(line);
     });
-    try{ await navigator.clipboard.writeText(lines.join("\n")); showToast("Matrix copied to clipboard"); }
-    catch(e){ showToast("Copy blocked by browser"); }
-  });
-
+    return aoa;
+  }
+  function notify(tw,msg){
+    if(!tw || tw===window){ showToast(msg); return; }
+    try{
+      var t=tw.document.getElementById("toast");
+      t.textContent=msg; t.classList.add("show");
+      clearTimeout(t._t); t._t=setTimeout(function(){ t.classList.remove("show"); },2400);
+    }catch(e){}
+  }
+  function stamp(){
+    var d=new Date(), pad=function(n){return (n<10?"0":"")+n;};
+    return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  }
+  function downloadBlob(tw,blob,name){
+    var url=URL.createObjectURL(blob), doc=tw.document, a=doc.createElement("a");
+    a.href=url; a.download=name;
+    doc.body.appendChild(a); a.click(); doc.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); },1500);
+  }
   function csvEsc(v){
     var s=(v==null?"":String(v));
     return /[",\r\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
   }
-  $("mtCsv").addEventListener("click",function(){
-    if(!rows.length){ showToast("Look up some properties first"); return; }
-    var cols=matrixCols();
-    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc;}));
-    var lines=[header.map(csvEsc).join(",")];
-    rows.forEach(function(r){
-      var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
-      cols.forEach(function(c){ line.push(cellExport(cellFor(r,c))); });
-      lines.push(line.map(csvEsc).join(","));
-    });
-    var d=new Date(), pad=function(n){return (n<10?"0":"")+n;};
-    var stamp=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-    var blob=new Blob(["﻿"+lines.join("\r\n")], {type:"text/csv;charset=utf-8;"});
-    var url=URL.createObjectURL(blob);
-    var a=document.createElement("a");
-    a.href=url; a.download="mtmatrix-feature-matrix-"+stamp+".csv";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-    showToast("Downloaded "+rows.length+" properties as CSV");
-  });
-
-  $("mtXlsx").addEventListener("click",function(){
-    if(!rows.length){ showToast("Look up some properties first"); return; }
-    if(typeof XLSX==="undefined"){ showToast("Excel export unavailable (library didn't load)"); return; }
-    var cols=matrixCols();
-    var header=["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc;}));
-    var aoa=[header];
-    rows.forEach(function(r){
-      var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
-      cols.forEach(function(c){ line.push(cellExport(cellFor(r,c),true)); });
-      aoa.push(line);
-    });
+  function exportCopy(tw){
+    if(!rows.length){ notify(tw,"Look up some properties first"); return; }
+    var text=matrixAoa(false).map(function(l){ return l.join("\t"); }).join("\n");
+    try{
+      tw.navigator.clipboard.writeText(text).then(
+        function(){ notify(tw,"Matrix copied to clipboard"); },
+        function(){ notify(tw,"Copy blocked by browser"); });
+    }catch(e){ notify(tw,"Copy blocked by browser"); }
+  }
+  function exportCsv(tw){
+    if(!rows.length){ notify(tw,"Look up some properties first"); return; }
+    var text=matrixAoa(false).map(function(l){ return l.map(csvEsc).join(","); }).join("\r\n");
+    downloadBlob(tw, new Blob(["﻿"+text],{type:"text/csv;charset=utf-8;"}), "mtmatrix-feature-matrix-"+stamp()+".csv");
+    notify(tw,"Downloaded "+rows.length+" properties as CSV");
+  }
+  function exportXlsx(tw){
+    if(!rows.length){ notify(tw,"Look up some properties first"); return; }
+    if(typeof XLSX==="undefined"){ notify(tw,"Excel export unavailable (library didn't load)"); return; }
+    var aoa=matrixAoa(true), header=aoa[0];
     var ws=XLSX.utils.aoa_to_sheet(aoa);
     // Keep Geocode (column index 2) as text so leading zeros are preserved in Excel.
     for(var i=1;i<aoa.length;i++){
@@ -836,11 +840,129 @@
     });
     var wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Feature Matrix");
-    var d=new Date(), pad=function(n){return (n<10?"0":"")+n;};
-    var stamp=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-    XLSX.writeFile(wb, "mtmatrix-feature-matrix-"+stamp+".xlsx");
-    showToast("Downloaded "+rows.length+" properties as Excel");
+    var out=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+    downloadBlob(tw, new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}), "mtmatrix-feature-matrix-"+stamp()+".xlsx");
+    notify(tw,"Downloaded "+rows.length+" properties as Excel");
+  }
+
+  // ---------- Pop-out table window ----------
+  function popAlive(){
+    try{ return !!(popWin && !popWin.closed && popWin.document.getElementById("mtBody")); }catch(e){ return false; }
+  }
+  function pushPop(){
+    if(!popAlive()) return;
+    var d=popWin.document;
+    d.getElementById("mtBody").innerHTML=matrixHtml();
+    d.getElementById("mtCount").textContent=rows.length ? rows.length+(rows.length===1?" property":" properties") : "";
+  }
+  // Called after every render(): keeps the floating table and the pop-out window live.
+  function syncMatrix(){
+    if(!$("tableModal").hidden){ if(rows.length) $("mtBody").innerHTML=matrixHtml(); else closeTable(); }
+    pushPop();
+  }
+  // Runs INSIDE the pop-out window (serialized with toString). It only talks to the map page via window.opener.MTM,
+  // so it keeps working (and re-attaches) if the map page is refreshed.
+  function popScript(){
+    var api=null;
+    function get(){ try{ var o=window.opener; return (o && !o.closed && o.MTM) ? o.MTM : null; }catch(e){ return null; } }
+    function tick(){
+      var a=get();
+      if(a!==api){ api=a; if(a){ try{ a.attach(window); }catch(e){ api=null; } } }
+      document.getElementById("popBanner").hidden=!!api;
+    }
+    function act(name){ return function(){ var a=get(); if(!a){ tick(); return; } a[name](window); }; }
+    document.getElementById("mtCopy").addEventListener("click",act("copy"));
+    document.getElementById("mtCsv").addEventListener("click",act("csv"));
+    document.getElementById("mtXlsx").addEventListener("click",act("xlsx"));
+    document.getElementById("mtDock").addEventListener("click",function(){ var a=get(); if(a) a.dock(); window.close(); });
+    document.getElementById("mtBody").addEventListener("click",function(e){
+      var tr=e.target.closest("tr");
+      if(!tr || !tr.parentElement || tr.parentElement.tagName!=="TBODY") return;
+      if(String(window.getSelection())) return;
+      tr.classList.toggle("rowsel");
+      var a=get(); if(a && tr.dataset.g) a.mark(tr.dataset.g, tr.classList.contains("rowsel"));
+    });
+    // Remember where this window sits so the next pop-out opens in the same spot.
+    function saveGeom(){
+      try{ localStorage.setItem("mtmatrix.popGeom", JSON.stringify({x:window.screenX,y:window.screenY,w:window.innerWidth,h:window.innerHeight})); }catch(e){}
+    }
+    window.addEventListener("beforeunload",saveGeom);
+    setInterval(saveGeom,2000);
+    tick(); setInterval(tick,1000);
+  }
+  var POP_CSS=
+    "body.pop{overflow:hidden;background:var(--bg-panel)}"+
+    ".pop-app{height:100vh;display:flex;flex-direction:column}"+
+    ".pop-app .modal-head{flex:none;flex-wrap:wrap}"+
+    ".pop-app .modal-body{flex:1 1 auto;min-height:0;overflow:auto}"+
+    ".pop-count{font:500 11px var(--font-mono);color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-left:4px}"+
+    ".pop-banner{flex:none;margin:10px 14px 0;padding:10px 14px;border:1px solid rgba(230,172,94,.45);border-radius:var(--radius-md);background:rgba(230,172,94,.10);color:var(--amber-400);font-size:13px}"+
+    ".pop-banner[hidden]{display:none}";
+  function popDoc(){
+    var css=Array.prototype.map.call(document.querySelectorAll("style"),function(s){ return s.textContent; }).join("\n");
+    var sprite=document.getElementById("ic-map").closest("svg").outerHTML;
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+      +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+      +'<title>MTMatrix — Feature Matrix</title><style>'+css+'\n'+POP_CSS+'</style></head><body class="pop">'+sprite
+      +'<div class="pop-app"><div class="modal-head">'
+      +'<h2><svg class="icon"><use href="#ic-grid"/></svg> Feature Matrix <span class="pop-count" id="mtCount"></span></h2>'
+      +'<div class="ph-spacer"></div>'
+      +'<button class="btn" id="mtCopy"><svg class="icon"><use href="#ic-copy"/></svg> Copy</button>'
+      +'<button class="btn" id="mtCsv"><svg class="icon"><use href="#ic-download"/></svg> CSV</button>'
+      +'<button class="btn" id="mtXlsx"><svg class="icon"><use href="#ic-download"/></svg> Excel</button>'
+      +'<button class="btn" id="mtDock" title="Close this window and put the table back over the map"><svg class="icon"><use href="#ic-dock"/></svg> Dock</button>'
+      +'</div>'
+      +'<div class="pop-banner" id="popBanner" hidden>Lost connection to the map window. If you refreshed it, this reconnects in a moment; if you closed it, reopen MTMatrix and pop the table out again.</div>'
+      +'<div class="modal-body" id="mtBody"></div></div>'
+      +'<div class="toast" id="toast"></div>'
+      +'</body></html>';
+  }
+  function popOut(){
+    var g={}; try{ g=JSON.parse(localStorage.getItem("mtmatrix.popGeom")||"{}")||{}; }catch(e){}
+    var w0=g.w||Math.min(1000,screen.availWidth-40), h0=g.h||Math.min(760,screen.availHeight-80);
+    var feat="popup=yes,width="+w0+",height="+h0+(g.x!=null?",left="+g.x+",top="+g.y:"");
+    var w=window.open("","mtmatrix-table",feat);
+    if(!w){ showToast("Pop-up blocked — allow pop-ups for this site, then try again"); return; }
+    var ready=false; try{ ready=!!w.document.getElementById("mtBody"); }catch(e){}
+    if(!ready){
+      w.document.open(); w.document.write(popDoc()); w.document.close();
+      // Chrome won't run a <script> written in via document.write from the opener, so inject the window's logic as an element.
+      var sc=w.document.createElement("script");
+      sc.textContent="("+popScript.toString()+")();";
+      w.document.body.appendChild(sc);
+    }
+    popWin=w;
+    closeTable();
+    pushPop();
+    try{ w.focus(); }catch(e){}
+  }
+  // The pop-out window calls back into the map page through this object.
+  window.MTM={
+    attach:function(w){ popWin=w; pushPop(); },
+    copy:exportCopy, csv:exportCsv, xlsx:exportXlsx,
+    mark:function(g,on){ if(on) marked[g]=true; else delete marked[g]; },
+    dock:function(){ popWin=null; if(rows.length) openTable(); }
+  };
+
+  $("tableBtn").addEventListener("click",function(){
+    if(popAlive()){ try{ popWin.focus(); }catch(e){} showToast("The table is open in its own window"); return; }
+    openTable();
   });
+  $("mtPop").addEventListener("click",popOut);
+  $("mtClose").addEventListener("click",closeTable);
+  $("tableModal").addEventListener("click",function(e){ if(e.target===this) closeTable(); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !$("tableModal").hidden) closeTable(); });
+  // Click a data row to toggle a persistent highlight (skips clicks that are text selections).
+  $("mtBody").addEventListener("click",function(e){
+    var tr=e.target.closest("tr");
+    if(!tr || !tr.parentElement || tr.parentElement.tagName!=="TBODY") return;
+    if(window.getSelection && String(window.getSelection())) return;
+    tr.classList.toggle("rowsel");
+    if(tr.dataset.g){ if(tr.classList.contains("rowsel")) marked[tr.dataset.g]=true; else delete marked[tr.dataset.g]; }
+  });
+  $("mtCopy").addEventListener("click",function(){ exportCopy(window); });
+  $("mtCsv").addEventListener("click",function(){ exportCsv(window); });
+  $("mtXlsx").addEventListener("click",function(){ exportXlsx(window); });
 
   render();
 })();
