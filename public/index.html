@@ -163,6 +163,27 @@
   .modal.floating .modal-panel{position:absolute;pointer-events:auto;width:min(760px,46vw);height:70vh;max-width:96vw;max-height:88vh;min-width:340px;min-height:220px;resize:both}
   .modal.floating .modal-head{cursor:move;user-select:none}
   .modal.floating .modal-head .btn{cursor:pointer}
+  .modal.floating .modal-head{flex-wrap:wrap;row-gap:8px}
+  /* Column picker + per-column hide */
+  .mtable th.hideable{padding-right:24px}
+  .mtable th .th-x{position:absolute;top:50%;right:4px;transform:translateY(-50%);width:18px;height:18px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--text-muted);font:600 14px/18px var(--font-core);cursor:pointer;opacity:0;transition:opacity .12s}
+  .mtable th:hover .th-x{opacity:.85}
+  .mtable th .th-x:hover{opacity:1;background:rgba(255,255,255,.12);color:var(--text-primary)}
+  .mt-picker{flex:none;max-height:45%;overflow:auto;border-bottom:1px solid var(--line-hairline);background:var(--bg-inset);padding:10px 16px 14px}
+  .mt-picker[hidden]{display:none}
+  .mp-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--text-primary)}
+  .mp-head .btn{padding:6px 12px;font-size:12px}
+  .mp-n{font:500 11px var(--font-mono);color:var(--text-muted);letter-spacing:.04em}
+  .mp-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px 20px}
+  .mp-gh{display:flex;align-items:center;gap:4px;font:600 10px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px}
+  .mp-ga{margin-left:auto;display:flex;gap:3px}
+  .mp-ga button{background:none;border:1px solid var(--line-hairline);border-radius:6px;color:var(--text-muted);font:500 10px var(--font-mono);padding:1px 6px;cursor:pointer}
+  .mp-ga button:hover{color:var(--text-primary);border-color:var(--line-node)}
+  .mp-item{display:flex;align-items:flex-start;gap:7px;font-size:12.5px;color:var(--text-body);padding:2px 0;cursor:pointer;line-height:1.35}
+  .mp-item input{accent-color:var(--cyan-400);margin:2px 0 0;flex:none;cursor:pointer}
+  .mp-fixed{opacity:.55;cursor:default}
+  .mp-badge{font:700 10px var(--font-mono);color:var(--void-900);background:var(--cyan-300);border-radius:999px;padding:1px 7px}
+  .btn.on{border-color:var(--line-node);color:var(--text-primary);background:var(--bg-node-hover)}
   .modal.floating .modal-body{flex:1 1 auto;min-height:0}
   .mtable{border-collapse:separate;border-spacing:0;font-size:12px;border:1px solid var(--mtable-grid)}
   .mtable th,.mtable td{padding:8px 12px;border-right:1px solid var(--mtable-grid);border-bottom:1px solid var(--mtable-grid);text-align:right}
@@ -216,6 +237,7 @@
   <symbol id="ic-warn" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
   <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 20h16"/></symbol>
   <symbol id="ic-popout" viewBox="0 0 24 24"><path d="M14 3h7v7"/><path d="M21 3l-9 9"/><path d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></symbol>
+  <symbol id="ic-cols" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></symbol>
   <symbol id="ic-dock" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></symbol>
 </defs></svg>
 
@@ -282,9 +304,11 @@
       <button class="btn" id="mtCopy"><svg class="icon"><use href="#ic-copy"/></svg> Copy</button>
       <button class="btn" id="mtCsv"><svg class="icon"><use href="#ic-download"/></svg> CSV</button>
       <button class="btn" id="mtXlsx"><svg class="icon"><use href="#ic-download"/></svg> Excel</button>
+      <button class="btn" id="mtColsBtn" data-act="cols" title="Choose which columns to show"><svg class="icon"><use href="#ic-cols"/></svg> Columns</button>
       <button class="btn" id="mtPop" title="Open the table in its own window — drag it to another monitor or snap it beside the map"><svg class="icon"><use href="#ic-popout"/></svg> Pop out</button>
       <button class="btn" id="mtClose"><svg class="icon"><use href="#ic-close"/></svg> Close</button>
     </div>
+    <div class="mt-picker" id="mtPicker" hidden></div>
     <div class="modal-body" id="mtBody"></div>
   </div>
 </div>
@@ -719,16 +743,67 @@
   var marked={};
   // The popped-out table window (its own browser window — can live on another monitor).
   var popWin=null;
+  // Hidden columns, keyed "group|description" (plus "_geocode"/"_type"). Remembered across sessions on this browser.
+  var hiddenCols={};
+  try{ hiddenCols=JSON.parse(localStorage.getItem("mtmatrix.hiddenCols")||"{}")||{}; }catch(e){ hiddenCols={}; }
+  function saveHidden(){ try{ localStorage.setItem("mtmatrix.hiddenCols",JSON.stringify(hiddenCols)); }catch(e){} }
+  var pickerOpen=false;
+  function colKey(c){ return c.group+"|"+c.desc; }
+  function visCols(){ return matrixCols().filter(function(c){ return !hiddenCols[colKey(c)]; }); }
+  function xBtn(k){ return '<button class="th-x" data-hide="'+esc(k)+'" title="Hide this column">\u00d7</button>'; }
+  function hiddenCount(){
+    var n=(hiddenCols._geocode?1:0)+(hiddenCols._type?1:0);
+    matrixCols().forEach(function(c){ if(hiddenCols[colKey(c)]) n++; });
+    return n;
+  }
+  function pickerHtml(){
+    var all=matrixCols(), shown=0, total=all.length+3;
+    function cb(k,label){
+      var on=!hiddenCols[k]; if(on) shown++;
+      return '<label class="mp-item"><input type="checkbox" data-col="'+esc(k)+'"'+(on?' checked':'')+'><span>'+esc(label)+'</span></label>';
+    }
+    var body='<div class="mp-group"><div class="mp-gh">Property</div>'
+      +'<label class="mp-item mp-fixed"><input type="checkbox" checked disabled><span>Address (always shown)</span></label>'
+      +cb("_geocode","Geocode")+cb("_type","Type")+'</div>';
+    shown++; // Address
+    GROUPS.forEach(function(g){
+      var cs=all.filter(function(c){ return c.group===g[0]; });
+      if(!cs.length) return;
+      body+='<div class="mp-group"><div class="mp-gh"><span class="gdot '+g[1]+'"></span>'+esc(g[0])
+        +'<span class="mp-ga"><button data-colgroup="'+esc(g[0])+'" data-on="1" title="Show every column in this group">All</button>'
+        +'<button data-colgroup="'+esc(g[0])+'" data-on="0" title="Hide every column in this group">None</button></span></div>'
+        +cs.map(function(c){ return cb(colKey(c),c.desc); }).join("")+'</div>';
+    });
+    return '<div class="mp-head"><strong>Show columns</strong><span class="mp-n">'+shown+' of '+total+' shown</span>'
+      +'<div class="ph-spacer"></div><button class="btn" data-colall="1">Show all</button><button class="btn" data-act="cols">Done</button></div>'
+      +'<div class="mp-groups">'+body+'</div>';
+  }
+  function colsBtnHtml(){
+    var n=hiddenCount();
+    return '<svg class="icon"><use href="#ic-cols"/></svg> Columns'+(n?' <span class="mp-badge">'+n+' hidden</span>':'');
+  }
+  // Paint the table, picker and Columns button into a document (this page's floating panel, or the pop-out window).
+  function paint(doc){
+    doc.getElementById("mtBody").innerHTML=matrixHtml();
+    var p=doc.getElementById("mtPicker");
+    if(p){ p.hidden=!pickerOpen; p.innerHTML=pickerOpen?pickerHtml():""; }
+    var b=doc.getElementById("mtColsBtn");
+    if(b){ b.innerHTML=colsBtnHtml(); b.classList.toggle("on",pickerOpen); }
+  }
   function matrixHtml(){
     if(!rows.length) return '<div class="modal-empty">No properties yet. Click parcels on the map or search to add them; this table updates as you go.</div>';
-    var cols=matrixCols();
+    var cols=visCols(), showGeo=!hiddenCols._geocode, showType=!hiddenCols._type;
     var h='<table class="mtable"><thead><tr>';
-    h+='<th class="lft stickyleft">Address</th><th class="lft">Geocode</th><th class="lft">Type</th>';
-    cols.forEach(function(c){ h+='<th title="'+esc(c.group)+'"><span class="gdot '+c.cls+'"></span>'+esc(c.desc)+'</th>'; });
+    h+='<th class="lft stickyleft">Address</th>';
+    if(showGeo) h+='<th class="lft hideable">Geocode'+xBtn("_geocode")+'</th>';
+    if(showType) h+='<th class="lft hideable">Type'+xBtn("_type")+'</th>';
+    cols.forEach(function(c){ h+='<th class="hideable" title="'+esc(c.group)+'"><span class="gdot '+c.cls+'"></span>'+esc(c.desc)+xBtn(colKey(c))+'</th>'; });
     h+='</tr></thead><tbody>';
     rows.forEach(function(r){
       var g=norm(r.property.geocode);
-      h+='<tr data-g="'+esc(g)+'"'+(marked[g]?' class="rowsel"':'')+'><td class="addr lft">'+esc(r.property.address)+'</td><td class="lft geo">'+esc(r.property.geocode)+'</td><td class="lft"><span class="chip '+(r.property.cls||"res")+'">'+esc(r.property.propertyType)+'</span></td>';
+      h+='<tr data-g="'+esc(g)+'"'+(marked[g]?' class="rowsel"':'')+'><td class="addr lft">'+esc(r.property.address)+'</td>';
+      if(showGeo) h+='<td class="lft geo">'+esc(r.property.geocode)+'</td>';
+      if(showType) h+='<td class="lft"><span class="chip '+(r.property.cls||"res")+'">'+esc(r.property.propertyType)+'</span></td>';
       cols.forEach(function(c){ h+='<td class="num">'+cellDisp(cellFor(r,c))+'</td>'; });
       h+='</tr>';
     });
@@ -737,8 +812,8 @@
   }
   function openTable(){
     if(!rows.length){ showToast("Look up some properties first"); return; }
-    $("mtBody").innerHTML=matrixHtml();
     $("tableModal").hidden=false;
+    paint(document);
     if(window.__mtPositionPanel) window.__mtPositionPanel();
   }
   function closeTable(){ $("tableModal").hidden=true; }
@@ -776,10 +851,16 @@
 
   // ---------- Exports (shared by the in-page table and the pop-out window; tw = the window the click came from) ----------
   function matrixAoa(nullEmpty){
-    var cols=matrixCols();
-    var aoa=[["Address","City/State/Zip","Geocode","Type"].concat(cols.map(function(c){return c.desc;}))];
+    var cols=visCols(), showGeo=!hiddenCols._geocode, showType=!hiddenCols._type;
+    var head=["Address","City/State/Zip"];
+    if(showGeo) head.push("Geocode");
+    if(showType) head.push("Type");
+    var aoa=[head.concat(cols.map(function(c){return c.desc;}))];
+    aoa.fixed=head.length;
     rows.forEach(function(r){
-      var line=[r.property.address, r.property.cityStateZip, r.property.geocode, r.property.propertyType];
+      var line=[r.property.address, r.property.cityStateZip];
+      if(showGeo) line.push(r.property.geocode);
+      if(showType) line.push(r.property.propertyType);
       cols.forEach(function(c){ line.push(cellExport(cellFor(r,c),nullEmpty)); });
       aoa.push(line);
     });
@@ -827,15 +908,16 @@
     if(typeof XLSX==="undefined"){ notify(tw,"Excel export unavailable (library didn't load)"); return; }
     var aoa=matrixAoa(true), header=aoa[0];
     var ws=XLSX.utils.aoa_to_sheet(aoa);
-    // Keep Geocode (column index 2) as text so leading zeros are preserved in Excel.
-    for(var i=1;i<aoa.length;i++){
-      var addr=XLSX.utils.encode_cell({r:i,c:2}), cell=ws[addr];
+    // Keep Geocode as text so leading zeros are preserved in Excel.
+    var gi=header.indexOf("Geocode");
+    for(var i=1;gi>=0 && i<aoa.length;i++){
+      var addr=XLSX.utils.encode_cell({r:i,c:gi}), cell=ws[addr];
       if(cell && cell.v!=null){ cell.t="s"; cell.v=String(cell.v); }
     }
     ws["!cols"]=header.map(function(h,idx){
       var maxLen=h.length;
       for(var ri=1;ri<aoa.length;ri++){ var cv=aoa[ri][idx]; if(cv!=null){ var L=String(cv).length; if(L>maxLen) maxLen=L; } }
-      var cap = idx<4 ? 30 : 40;
+      var cap = idx<aoa.fixed ? 30 : 40;
       return {wch:Math.min(cap, Math.max(12, maxLen+2))};
     });
     var wb=XLSX.utils.book_new();
@@ -852,13 +934,44 @@
   function pushPop(){
     if(!popAlive()) return;
     var d=popWin.document;
-    d.getElementById("mtBody").innerHTML=matrixHtml();
+    paint(d);
     d.getElementById("mtCount").textContent=rows.length ? rows.length+(rows.length===1?" property":" properties") : "";
   }
   // Called after every render(): keeps the floating table and the pop-out window live.
   function syncMatrix(){
-    if(!$("tableModal").hidden){ if(rows.length) $("mtBody").innerHTML=matrixHtml(); else closeTable(); }
+    if(!$("tableModal").hidden){ if(rows.length) paint(document); else closeTable(); }
     pushPop();
+  }
+  // Clicks/changes inside either table window (tw = that window). Columns picker, header ×, and the row bookmark.
+  function matrixAct(e,tw){
+    var t=e.target, el;
+    if(!t || !t.closest) return;
+    if((el=t.closest("[data-act='cols']"))){ pickerOpen=!pickerOpen; syncMatrix(); return; }
+    if((el=t.closest("[data-hide]"))){
+      e.stopPropagation();
+      var th=el.closest("th"), label=th?th.textContent.replace("\u00d7","").trim():"column";
+      hiddenCols[el.dataset.hide]=true; saveHidden(); syncMatrix();
+      notify(tw,'Hid \u201c'+label+'\u201d \u2014 bring it back from Columns');
+      return;
+    }
+    if((el=t.closest("[data-colall]"))){ hiddenCols={}; saveHidden(); syncMatrix(); return; }
+    if((el=t.closest("[data-colgroup]"))){
+      var on=el.dataset.on==="1", grp=el.dataset.colgroup;
+      matrixCols().forEach(function(c){ if(c.group===grp){ if(on) delete hiddenCols[colKey(c)]; else hiddenCols[colKey(c)]=true; } });
+      saveHidden(); syncMatrix(); return;
+    }
+    var tr=t.closest("#mtBody tbody tr");
+    if(tr){
+      if(tw.getSelection && String(tw.getSelection())) return;   // drag-selecting text to copy shouldn't toggle
+      tr.classList.toggle("rowsel");
+      if(tr.dataset.g){ if(tr.classList.contains("rowsel")) marked[tr.dataset.g]=true; else delete marked[tr.dataset.g]; }
+    }
+  }
+  function matrixChange(e){
+    var el=e.target;
+    if(!el || !el.dataset || el.dataset.col==null) return;
+    if(el.checked) delete hiddenCols[el.dataset.col]; else hiddenCols[el.dataset.col]=true;
+    saveHidden(); syncMatrix();
   }
   // Runs INSIDE the pop-out window (serialized with toString). It only talks to the map page via window.opener.MTM,
   // so it keeps working (and re-attaches) if the map page is refreshed.
@@ -875,13 +988,9 @@
     document.getElementById("mtCsv").addEventListener("click",act("csv"));
     document.getElementById("mtXlsx").addEventListener("click",act("xlsx"));
     document.getElementById("mtDock").addEventListener("click",function(){ var a=get(); if(a) a.dock(); window.close(); });
-    document.getElementById("mtBody").addEventListener("click",function(e){
-      var tr=e.target.closest("tr");
-      if(!tr || !tr.parentElement || tr.parentElement.tagName!=="TBODY") return;
-      if(String(window.getSelection())) return;
-      tr.classList.toggle("rowsel");
-      var a=get(); if(a && tr.dataset.g) a.mark(tr.dataset.g, tr.classList.contains("rowsel"));
-    });
+    var app=document.querySelector(".pop-app");
+    app.addEventListener("click",function(e){ var a=get(); if(a) a.act(e,window); });
+    app.addEventListener("change",function(e){ var a=get(); if(a) a.change(e); });
     // Remember where this window sits so the next pop-out opens in the same spot.
     function saveGeom(){
       try{ localStorage.setItem("mtmatrix.popGeom", JSON.stringify({x:window.screenX,y:window.screenY,w:window.innerWidth,h:window.innerHeight})); }catch(e){}
@@ -910,9 +1019,11 @@
       +'<button class="btn" id="mtCopy"><svg class="icon"><use href="#ic-copy"/></svg> Copy</button>'
       +'<button class="btn" id="mtCsv"><svg class="icon"><use href="#ic-download"/></svg> CSV</button>'
       +'<button class="btn" id="mtXlsx"><svg class="icon"><use href="#ic-download"/></svg> Excel</button>'
+      +'<button class="btn" id="mtColsBtn" data-act="cols" title="Choose which columns to show"><svg class="icon"><use href="#ic-cols"/></svg> Columns</button>'
       +'<button class="btn" id="mtDock" title="Close this window and put the table back over the map"><svg class="icon"><use href="#ic-dock"/></svg> Dock</button>'
       +'</div>'
       +'<div class="pop-banner" id="popBanner" hidden>Lost connection to the map window. If you refreshed it, this reconnects in a moment; if you closed it, reopen MTMatrix and pop the table out again.</div>'
+      +'<div class="mt-picker" id="mtPicker" hidden></div>'
       +'<div class="modal-body" id="mtBody"></div></div>'
       +'<div class="toast" id="toast"></div>'
       +'</body></html>';
@@ -940,7 +1051,7 @@
   window.MTM={
     attach:function(w){ popWin=w; pushPop(); },
     copy:exportCopy, csv:exportCsv, xlsx:exportXlsx,
-    mark:function(g,on){ if(on) marked[g]=true; else delete marked[g]; },
+    act:matrixAct, change:matrixChange,
     dock:function(){ popWin=null; if(rows.length) openTable(); }
   };
 
@@ -952,14 +1063,12 @@
   $("mtClose").addEventListener("click",closeTable);
   $("tableModal").addEventListener("click",function(e){ if(e.target===this) closeTable(); });
   document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !$("tableModal").hidden) closeTable(); });
-  // Click a data row to toggle a persistent highlight (skips clicks that are text selections).
-  $("mtBody").addEventListener("click",function(e){
-    var tr=e.target.closest("tr");
-    if(!tr || !tr.parentElement || tr.parentElement.tagName!=="TBODY") return;
-    if(window.getSelection && String(window.getSelection())) return;
-    tr.classList.toggle("rowsel");
-    if(tr.dataset.g){ if(tr.classList.contains("rowsel")) marked[tr.dataset.g]=true; else delete marked[tr.dataset.g]; }
-  });
+  // Columns picker, header ×, and click-a-row bookmark (shared logic with the pop-out window).
+  (function(){
+    var panel=$("tableModal").querySelector(".modal-panel");
+    panel.addEventListener("click",function(e){ matrixAct(e,window); });
+    panel.addEventListener("change",matrixChange);
+  })();
   $("mtCopy").addEventListener("click",function(){ exportCopy(window); });
   $("mtCsv").addEventListener("click",function(){ exportCsv(window); });
   $("mtXlsx").addEventListener("click",function(){ exportXlsx(window); });
