@@ -262,6 +262,11 @@
     <section class="panel">
       <div class="panel-head"><h2><svg class="icon"><use href="#ic-map"/></svg> Parcel Map</h2>
         <div class="ph-spacer"></div>
+        <select id="basemapSel" title="Basemap" aria-label="Basemap">
+          <option value="ofm">OpenFreeMap Dark</option>
+          <option value="esri">Esri Dark Gray</option>
+          <option value="imagery">Esri Imagery</option>
+        </select>
         <button class="btn" id="boxBtn"><svg class="icon"><use href="#ic-box"/></svg> Box</button>
         <button class="btn" id="polyBtn"><svg class="icon"><use href="#ic-poly"/></svg> Polygon</button>
       </div>
@@ -349,37 +354,58 @@
 
   // ---------- Map ----------
   var map = L.map("map",{zoomControl:true,attributionControl:true,maxZoom:20}).setView([45.7833,-108.5007],14);
-  // Basemap: OpenFreeMap "Dark" vector style (free, keyless) drawn by MapLibre, so roads and
-  // building outlines stay sharp at every zoom. Falls back to the Esri dark-gray raster tiles
-  // (blurry past z16) if WebGL / MapLibre isn't available. Add ?basemap=esri to the URL to compare.
+  // ---------- Basemaps (picker in the map header; choice remembered on this browser) ----------
+  //  ofm     — OpenFreeMap "Dark" vector style (free, keyless) drawn by MapLibre: sharp at every zoom.
+  //            Default. Building outlines come from OpenStreetMap, so some can be missing.
+  //  esri    — Esri dark-gray canvas raster (keyless). Native tiles stop at z16, so it blurs past that.
+  //  imagery — Esri World Imagery aerials (keyless, ~z19 native) + Esri place/road labels.
+  // ?basemap=esri|imagery|ofm in the URL also picks one.
+  var ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
+  var OFM_ATTR='<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
   function webglOk(){
     try{ var c=document.createElement("canvas"); return !!(c.getContext("webgl2")||c.getContext("webgl")); }catch(e){ return false; }
   }
-  function addEsriBasemap(){
-    // Esri dark-gray canvas — keyless; native tiles stop at z16.
-    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",{
-      maxZoom:20, maxNativeZoom:16, attribution:"Tiles &copy; Esri"
-    }).addTo(map);
-    // Street/place labels on top of the base (also keyless).
-    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",{
-      maxZoom:20, maxNativeZoom:16
-    }).addTo(map);
+  // The plugin's browser build exposes itself as window.MaplibreGLLeaflet (older builds used L.maplibreGL).
+  var mlLayer=(window.MaplibreGLLeaflet && window.MaplibreGLLeaflet.maplibreGL) || L.maplibreGL;
+  var vectorOk=!!(window.maplibregl && mlLayer && webglOk());
+  var BASEMAPS={
+    ofm:function(){
+      // The plugin reads the Leaflet credit line from attributionControl.customAttribution.
+      return mlLayer({ style:"https://tiles.openfreemap.org/styles/dark", attributionControl:{customAttribution:OFM_ATTR} });
+    },
+    esri:function(){
+      return L.layerGroup([
+        L.tileLayer(ESRI+"Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,maxNativeZoom:16,attribution:"Tiles &copy; Esri"}),
+        L.tileLayer(ESRI+"Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,maxNativeZoom:16})
+      ]);
+    },
+    imagery:function(){
+      return L.layerGroup([
+        L.tileLayer(ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,maxNativeZoom:19,attribution:"Imagery &copy; Esri, Maxar, Earthstar Geographics"}),
+        L.tileLayer(ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,maxNativeZoom:19}),
+        L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,maxNativeZoom:19})
+      ]);
+    }
+  };
+  var baseLayer=null, baseKey=null;
+  function setBasemap(key){
+    if(!BASEMAPS[key]) key="ofm";
+    if(key==="ofm" && !vectorOk) key="esri";
+    if(key===baseKey) return;
+    var next;
+    try{ next=BASEMAPS[key](); }catch(e){ if(key!=="esri"){ setBasemap("esri"); } return; }
+    if(baseLayer) map.removeLayer(baseLayer);
+    baseLayer=next.addTo(map); baseKey=key;
+    var sel=$("basemapSel"); if(sel) sel.value=key;
+    try{ localStorage.setItem("mtmatrix.basemap",key); }catch(e){}
   }
   (function(){
-    var wantEsri=/[?&]basemap=esri\b/i.test(location.search);
-    // The plugin's browser build exposes itself as window.MaplibreGLLeaflet (older builds used L.maplibreGL).
-    var mlLayer=(window.MaplibreGLLeaflet && window.MaplibreGLLeaflet.maplibreGL) || L.maplibreGL;
-    if(!wantEsri && window.maplibregl && mlLayer && webglOk()){
-      try{
-        mlLayer({
-          style:"https://tiles.openfreemap.org/styles/dark",
-          // The plugin reads the Leaflet credit line from attributionControl.customAttribution.
-          attributionControl:{customAttribution:'<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}
-        }).addTo(map);
-        return;
-      }catch(e){ /* fall through to Esri */ }
-    }
-    addEsriBasemap();
+    var sel=$("basemapSel");
+    if(!vectorOk){ var o=sel.querySelector('option[value="ofm"]'); o.disabled=true; o.textContent="OpenFreeMap Dark (needs WebGL)"; }
+    var m=/[?&]basemap=(\w+)/i.exec(location.search), saved=null;
+    try{ saved=localStorage.getItem("mtmatrix.basemap"); }catch(e){}
+    setBasemap((m && m[1].toLowerCase()) || saved || "ofm");
+    sel.addEventListener("change",function(){ setBasemap(sel.value); });
   })();
   setTimeout(function(){ map.invalidateSize(); },200);
   window.addEventListener("resize", function(){ map.invalidateSize(); });
