@@ -89,6 +89,13 @@ function buildAddress(summary) {
   return line || "(no situs address on record)";
 }
 
+// A depreciation rating, e.g. "Very Good (9)". Prefer the description, fall
+// back to the raw code ("VG"); blank / missing -> null.
+function rating(desc, code) {
+  const v = String(desc || code || "").trim();
+  return v || null;
+}
+
 // Strip a leading code prefix like "33 - " or "CPA2 - " for display.
 function stripCode(s) {
   return String(s || "").replace(/^\s*[A-Za-z0-9]+\s*-\s*/, "").trim();
@@ -276,6 +283,11 @@ app.get("/api/slice", async (req, res) => {
         grade: det.grade ?? null,
         rcnld: det.rcnld ?? null,
         pctGood: det.pctGood ?? null,
+        // Depreciation ratings (the "Desirability" block on the property record).
+        // The overall CDU is usually blank ("n/a"), so it isn't surfaced.
+        condition: rating(det.physicalConditionDescription, det.physicalCondition),
+        propertyDesirability: rating(det.propertyDesirabilityDescription, det.propertyDesirability),
+        locationDesirability: rating(det.locationDesirabilityDescription, det.locationDesirability),
       };
     }
 

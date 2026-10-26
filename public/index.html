@@ -748,23 +748,30 @@
   try{ hiddenCols=JSON.parse(localStorage.getItem("mtmatrix.hiddenCols")||"{}")||{}; }catch(e){ hiddenCols={}; }
   function saveHidden(){ try{ localStorage.setItem("mtmatrix.hiddenCols",JSON.stringify(hiddenCols)); }catch(e){} }
   var pickerOpen=false;
+  // Dwelling depreciation ratings — one value per property, shown after Type. Blank for non-dwellings.
+  var DEP_COLS=[["_cond","Condition","condition"],["_desir","Desirability","propertyDesirability"],["_loc","Location","locationDesirability"]];
+  function depVal(r,k){ return (r.dwelling && r.dwelling[k]) || ""; }
+  function depShown(){ return DEP_COLS.filter(function(d){ return !hiddenCols[d[0]]; }); }
   function colKey(c){ return c.group+"|"+c.desc; }
   function visCols(){ return matrixCols().filter(function(c){ return !hiddenCols[colKey(c)]; }); }
   function xBtn(k){ return '<button class="th-x" data-hide="'+esc(k)+'" title="Hide this column">\u00d7</button>'; }
   function hiddenCount(){
     var n=(hiddenCols._geocode?1:0)+(hiddenCols._type?1:0);
+    DEP_COLS.forEach(function(d){ if(hiddenCols[d[0]]) n++; });
     matrixCols().forEach(function(c){ if(hiddenCols[colKey(c)]) n++; });
     return n;
   }
   function pickerHtml(){
-    var all=matrixCols(), shown=0, total=all.length+3;
+    var all=matrixCols(), shown=0, total=all.length+3+DEP_COLS.length;
     function cb(k,label){
       var on=!hiddenCols[k]; if(on) shown++;
       return '<label class="mp-item"><input type="checkbox" data-col="'+esc(k)+'"'+(on?' checked':'')+'><span>'+esc(label)+'</span></label>';
     }
     var body='<div class="mp-group"><div class="mp-gh">Property</div>'
       +'<label class="mp-item mp-fixed"><input type="checkbox" checked disabled><span>Address (always shown)</span></label>'
-      +cb("_geocode","Geocode")+cb("_type","Type")+'</div>';
+      +cb("_geocode","Geocode")+cb("_type","Type")+'</div>'
+      +'<div class="mp-group"><div class="mp-gh">Depreciation</div>'
+      +DEP_COLS.map(function(d){ return cb(d[0],d[1]); }).join("")+'</div>';
     shown++; // Address
     GROUPS.forEach(function(g){
       var cs=all.filter(function(c){ return c.group===g[0]; });
@@ -792,11 +799,12 @@
   }
   function matrixHtml(){
     if(!rows.length) return '<div class="modal-empty">No properties yet. Click parcels on the map or search to add them; this table updates as you go.</div>';
-    var cols=visCols(), showGeo=!hiddenCols._geocode, showType=!hiddenCols._type;
+    var cols=visCols(), showGeo=!hiddenCols._geocode, showType=!hiddenCols._type, deps=depShown();
     var h='<table class="mtable"><thead><tr>';
     h+='<th class="lft stickyleft">Address</th>';
     if(showGeo) h+='<th class="lft hideable">Geocode'+xBtn("_geocode")+'</th>';
     if(showType) h+='<th class="lft hideable">Type'+xBtn("_type")+'</th>';
+    deps.forEach(function(d){ h+='<th class="lft hideable" title="Dwelling depreciation">'+esc(d[1])+xBtn(d[0])+'</th>'; });
     cols.forEach(function(c){ h+='<th class="hideable" title="'+esc(c.group)+'"><span class="gdot '+c.cls+'"></span>'+esc(c.desc)+xBtn(colKey(c))+'</th>'; });
     h+='</tr></thead><tbody>';
     rows.forEach(function(r){
@@ -804,6 +812,7 @@
       h+='<tr data-g="'+esc(g)+'"'+(marked[g]?' class="rowsel"':'')+'><td class="addr lft">'+esc(r.property.address)+'</td>';
       if(showGeo) h+='<td class="lft geo">'+esc(r.property.geocode)+'</td>';
       if(showType) h+='<td class="lft"><span class="chip '+(r.property.cls||"res")+'">'+esc(r.property.propertyType)+'</span></td>';
+      deps.forEach(function(d){ h+='<td class="lft">'+esc(depVal(r,d[2]))+'</td>'; });
       cols.forEach(function(c){ h+='<td class="num">'+cellDisp(cellFor(r,c))+'</td>'; });
       h+='</tr>';
     });
@@ -855,12 +864,15 @@
     var head=["Address","City/State/Zip"];
     if(showGeo) head.push("Geocode");
     if(showType) head.push("Type");
+    var deps=depShown();
+    deps.forEach(function(d){ head.push(d[1]); });
     var aoa=[head.concat(cols.map(function(c){return c.desc;}))];
     aoa.fixed=head.length;
     rows.forEach(function(r){
       var line=[r.property.address, r.property.cityStateZip];
       if(showGeo) line.push(r.property.geocode);
       if(showType) line.push(r.property.propertyType);
+      deps.forEach(function(d){ var v=depVal(r,d[2]); line.push(v || (nullEmpty?null:"")); });
       cols.forEach(function(c){ line.push(cellExport(cellFor(r,c),nullEmpty)); });
       aoa.push(line);
     });
