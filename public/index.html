@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MTMatrix</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css">
 <style>
   @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
@@ -327,6 +328,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- Vector basemap renderer (OpenFreeMap) + its Leaflet bridge. jsDelivr: the plugin isn't on cdnjs. -->
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 (function(){
@@ -344,15 +348,39 @@
   function setHint(msg){ $("mapHint").innerHTML='<span class="dot"></span> '+esc(msg); }
 
   // ---------- Map ----------
-  var map = L.map("map",{zoomControl:true,attributionControl:true}).setView([45.7833,-108.5007],14);
-  // Esri dark-gray canvas — keyless, dark, good match for the theme.
-  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",{
-    maxZoom:20, maxNativeZoom:16, attribution:"Tiles &copy; Esri"
-  }).addTo(map);
-  // Street/place labels on top of the base (also keyless).
-  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",{
-    maxZoom:20, maxNativeZoom:16
-  }).addTo(map);
+  var map = L.map("map",{zoomControl:true,attributionControl:true,maxZoom:20}).setView([45.7833,-108.5007],14);
+  // Basemap: OpenFreeMap "Dark" vector style (free, keyless) drawn by MapLibre, so roads and
+  // building outlines stay sharp at every zoom. Falls back to the Esri dark-gray raster tiles
+  // (blurry past z16) if WebGL / MapLibre isn't available. Add ?basemap=esri to the URL to compare.
+  function webglOk(){
+    try{ var c=document.createElement("canvas"); return !!(c.getContext("webgl2")||c.getContext("webgl")); }catch(e){ return false; }
+  }
+  function addEsriBasemap(){
+    // Esri dark-gray canvas — keyless; native tiles stop at z16.
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",{
+      maxZoom:20, maxNativeZoom:16, attribution:"Tiles &copy; Esri"
+    }).addTo(map);
+    // Street/place labels on top of the base (also keyless).
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",{
+      maxZoom:20, maxNativeZoom:16
+    }).addTo(map);
+  }
+  (function(){
+    var wantEsri=/[?&]basemap=esri\b/i.test(location.search);
+    // The plugin's browser build exposes itself as window.MaplibreGLLeaflet (older builds used L.maplibreGL).
+    var mlLayer=(window.MaplibreGLLeaflet && window.MaplibreGLLeaflet.maplibreGL) || L.maplibreGL;
+    if(!wantEsri && window.maplibregl && mlLayer && webglOk()){
+      try{
+        mlLayer({
+          style:"https://tiles.openfreemap.org/styles/dark",
+          // The plugin reads the Leaflet credit line from attributionControl.customAttribution.
+          attributionControl:{customAttribution:'<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}
+        }).addTo(map);
+        return;
+      }catch(e){ /* fall through to Esri */ }
+    }
+    addEsriBasemap();
+  })();
   setTimeout(function(){ map.invalidateSize(); },200);
   window.addEventListener("resize", function(){ map.invalidateSize(); });
 
