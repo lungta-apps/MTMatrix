@@ -200,9 +200,23 @@
   .mtable tbody tr:hover td.addr{background:var(--void-500)}
   .mtable tbody tr{cursor:pointer}
   .mtable tbody tr.rowsel td{background:rgba(63,216,240,.18)}
-  .mtable tbody tr.rowsel td.addr{background:rgba(21,155,184,.34);box-shadow:inset 3px 0 0 #3fd8f0}
+  .mtable tbody tr.rowsel td.addr{background:#0e3f52;box-shadow:inset 3px 0 0 #3fd8f0}
   .mtable tbody tr.rowsel:hover td{background:rgba(63,216,240,.24)}
-  .mtable tbody tr.rowsel:hover td.addr{background:rgba(21,155,184,.42);box-shadow:inset 3px 0 0 #3fd8f0}
+  .mtable tbody tr.rowsel:hover td.addr{background:#0f4a5e;box-shadow:inset 3px 0 0 #3fd8f0}
+  /* Map link: the row whose parcel is highlighted on the map (amber, separate from the cyan bookmark). */
+  .mtable tbody tr.rowfocus td{box-shadow:inset 0 2px 0 var(--amber-400),inset 0 -2px 0 var(--amber-400)!important}
+  .mtable tbody tr.rowfocus td.addr{box-shadow:inset 4px 0 0 var(--amber-400),inset 0 2px 0 var(--amber-400),inset 0 -2px 0 var(--amber-400)!important}
+  .mtable tbody tr.rowfocus:not(.rowsel) td{background:rgba(230,172,94,.10)}
+  .mtable tbody tr.rowfocus:not(.rowsel) td.addr{background:#2a2418}
+  #results tbody tr[data-g]{cursor:pointer}
+  tbody tr.rowfocus>td{background:rgba(230,172,94,.08)}
+  tbody tr.rowfocus>td:first-child{box-shadow:inset 3px 0 0 var(--amber-400)}
+  .loc{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:-3px 6px -3px -4px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--ink-4);cursor:pointer;vertical-align:middle;flex:none}
+  .loc .icon{width:15px;height:15px}
+  .loc:hover{color:var(--amber-400);background:rgba(230,172,94,.12)}
+  .loc:focus-visible{outline:none;box-shadow:0 0 0 2px var(--amber-400)}
+  tr.rowfocus .loc{color:var(--amber-400)}
+  .leaflet-overlay-pane path.mt-focus{filter:drop-shadow(0 0 5px rgba(230,172,94,.95))}
   .mtable .num{font-family:var(--font-mono);color:var(--cyan-300);font-variant-numeric:tabular-nums;line-height:1.5}
   .mtable .tot{color:var(--text-primary);font-weight:700}
   .mtable .totrow td{border-top:1px solid var(--line-node);background:var(--bg-inset)}
@@ -342,6 +356,7 @@
   "use strict";
   var rows = [];
   var lastError = null;
+  var focusG = null;   // table <-> map highlight (see "Table ↔ map link")
   var MINZOOM = 16;
 
   var $ = function(id){ return document.getElementById(id); };
@@ -417,14 +432,24 @@
       ? {color:"#6ae6f7",weight:2,opacity:1,fillColor:"#22c2e0",fillOpacity:0.25}
       : {color:"#3fd8f0",weight:0.8,opacity:0.35,fillColor:"#1e2942",fillOpacity:0.05};
   }
+  function isListed(pid){ return rows.some(function(r){ return norm(r.property.geocode)===norm(pid); }); }
   var parcelLayer = L.geoJSON(null,{
     style:parcelStyle,
     onEachFeature:function(feat,layer){
+      // Click: add an unlisted parcel, or find a listed one in the table (click it again to clear the highlight).
       layer.on("click",function(){
-        if(tool!=="none") return;               // don't toggle while drawing a box/polygon
+        if(tool!=="none") return;               // don't act while drawing a box/polygon
         var pid=feat.properties.PARCELID;
-        if(rows.some(function(r){return norm(r.property.geocode)===norm(pid);})) removeByPid(pid);
-        else addProperty(pid,false);
+        if(!isListed(pid)){ addProperty(pid,false); return; }
+        if(focusG===norm(pid)) clearFocus();
+        else setFocus(pid,{from:"map"});
+      });
+      // Right-click a listed parcel to remove it.
+      layer.on("contextmenu",function(e){
+        if(e && e.originalEvent) L.DomEvent.preventDefault(e.originalEvent);
+        if(tool!=="none") return;
+        var pid=feat.properties.PARCELID;
+        if(isListed(pid)) removeByPid(pid);
       });
       layer.on("mouseover",function(){ layer.setStyle({weight:1.6,opacity:.85}); });
       layer.on("mouseout",function(){ layer.setStyle(parcelStyle(feat)); });
@@ -446,21 +471,89 @@
       parcelLayer.clearLayers();
       parcelLayer.addData(fc);
       restyle();
+      focusLayer.eachLayer(function(l){ if(l.bringToFront) l.bringToFront(); });   // keep the amber highlight above freshly loaded parcels
       var n=(fc.features||[]).length;
-      setHint(n+" parcel"+(n===1?"":"s")+" in view"+(fc.exceededTransferLimit?" (zoom in for all)":"")+" · click to add");
+      setHint(n+" parcel"+(n===1?"":"s")+" in view"+(fc.exceededTransferLimit?" (zoom in for all)":"")+" · click to add or find in table · right-click to remove");
     }catch(e){ setHint("Could not load parcels"); }
   }
   map.on("moveend", scheduleLoad);
 
+  // Parcel shapes by hyphen-less geocode, so locating the same parcel twice doesn't refetch.
+  var shapeCache={};
+  async function getShape(geocode){
+    var k=norm(geocode);
+    if(shapeCache[k]) return shapeCache[k];
+    var res=await fetch("/api/parcel?geocode="+encodeURIComponent(geocode));
+    var fc=await res.json();
+    if(!res.ok || !fc.features || !fc.features.length) return null;
+    shapeCache[k]=fc;
+    return fc;
+  }
   async function flyToGeocode(geocode){
     try{
-      var res=await fetch("/api/parcel?geocode="+encodeURIComponent(geocode));
-      var fc=await res.json();
-      if(res.ok && fc.features && fc.features.length){
-        var gj=L.geoJSON(fc);
-        map.fitBounds(gj.getBounds(),{maxZoom:18,padding:[30,30]});
-      }else{ showToast("Found the record, but no map shape for this parcel"); }
+      var fc=await getShape(geocode);
+      if(fc) map.fitBounds(L.geoJSON(fc).getBounds(),{maxZoom:18,padding:[30,30]});
+      else showToast("Found the record, but no map shape for this parcel");
     }catch(e){}
+  }
+
+  // ---------- Table ↔ map link ----------
+  // focusG = hyphen-less geocode of the one parcel highlighted on BOTH the map (amber outline) and the tables (amber row).
+  // The amber outline is its own non-clickable layer, so it shows at any zoom and clicks pass through to the parcel below.
+  var FOCUS_STYLE={color:"#e6ac5e",weight:3,opacity:1,fillColor:"#e6ac5e",fillOpacity:0.22,interactive:false,className:"mt-focus"};
+  var focusLayer=L.layerGroup().addTo(map), focusSeq=0;
+  // from = where the click came from ("map", "sidebar" or "table"); every OTHER open table scrolls to the row.
+  function markFocusRows(doc,from){
+    if(!doc) return;
+    doc.querySelectorAll("tr.rowfocus").forEach(function(tr){ tr.classList.remove("rowfocus"); });
+    if(!focusG) return;
+    doc.querySelectorAll('tr[data-g="'+(window.CSS&&CSS.escape?CSS.escape(focusG):focusG)+'"]').forEach(function(tr){
+      tr.classList.add("rowfocus");
+      var inSidebar=!!tr.closest(".results-body"), inMatrix=!inSidebar;
+      if(from && !(from==="sidebar" && inSidebar) && !(from==="table" && inMatrix)) scrollRowIntoView(tr);
+    });
+  }
+  // Scroll only up/down inside the row's own scroll box, so the table's sideways position stays put.
+  function scrollRowIntoView(tr){
+    var box=tr.closest(".modal-body, .results-body");
+    if(!box) return;
+    var head=tr.closest("table").querySelector("thead"), hh=head?head.offsetHeight:0;
+    var top=tr.getBoundingClientRect().top-box.getBoundingClientRect().top+box.scrollTop;
+    var target=top-hh-(box.clientHeight-hh-tr.offsetHeight)/2;
+    try{ box.scrollTo({top:Math.max(0,target),behavior:"smooth"}); }catch(e){ box.scrollTop=Math.max(0,target); }
+  }
+  // Update the amber row in every table that's open: Properties panel, floating Feature Matrix, pop-out window.
+  function markFocusEverywhere(from){
+    markFocusRows(document,from);
+    if(popAlive()) markFocusRows(popWin.document,from);
+  }
+  async function setFocus(geocode,opts){
+    opts=opts||{};
+    var k=norm(geocode), seq=++focusSeq;
+    focusG=k;
+    markFocusEverywhere(opts.from);
+    focusLayer.clearLayers();
+    var row=rows.find(function(x){ return norm(x.property.geocode)===k; });
+    try{
+      // Use the parcel already drawn on the map when there is one; otherwise fetch its shape by the row's own geocode.
+      var fc=loadedShape(k) || await getShape(row ? row.property.geocode : geocode);
+      if(seq!==focusSeq) return;                 // a newer highlight replaced this one
+      if(!fc){ showToast("No map shape for this parcel"); return; }
+      var gj=L.geoJSON(fc,{style:function(){ return FOCUS_STYLE; },interactive:false}).addTo(focusLayer);
+      if(opts.fly) map.fitBounds(gj.getBounds(),{maxZoom:18,padding:[40,40]});
+    }catch(e){ if(seq===focusSeq) showToast("Couldn't load the map shape for this parcel"); }
+    if(opts.from==="map" && row){
+      var tableOpen=!$("tableModal").hidden || popAlive();
+      showToast((row.property.address||row.property.geocode)+(tableOpen?" highlighted in the table":" highlighted in Properties"));
+    }
+  }
+  function loadedShape(k){
+    var hit=null;
+    parcelLayer.eachLayer(function(l){ if(!hit && l.feature && norm(l.feature.properties.PARCELID)===k) hit=l.feature; });
+    return hit ? {type:"FeatureCollection",features:[hit]} : null;
+  }
+  function clearFocus(){
+    focusSeq++; focusG=null; focusLayer.clearLayers(); markFocusEverywhere(null);
   }
 
   // ---------- Data ----------
@@ -496,6 +589,8 @@
     $("stProps").textContent=rows.length;
     $("stFeats").textContent=featCount;
     $("stCost").textContent=money(featCost);
+    // A highlighted parcel that left the list (removed or cleared) loses its highlight.
+    if(focusG && !isListed(focusG)){ focusSeq++; focusG=null; focusLayer.clearLayers(); }
 
     var html="";
     if(lastError){ html+='<div class="banner err"><svg class="icon"><use href="#ic-warn"/></svg><span>'+esc(lastError)+'</span></div>'; }
@@ -507,10 +602,10 @@
     }
     html+='<table><thead><tr><th>Address</th><th>Geocode</th><th>Type</th><th>Features</th><th></th></tr></thead><tbody>';
     rows.forEach(function(r,i){
-      var cls=r.property.cls||"res";
-      html+='<tr>'
+      var cls=r.property.cls||"res", g=norm(r.property.geocode);
+      html+='<tr data-g="'+esc(g)+'"'+(focusG===g?' class="rowfocus"':'')+'>'
         +'<td class="addr">'+esc(r.property.address)+'<small>'+esc(r.property.cityStateZip)+'</small></td>'
-        +'<td class="geo">'+esc(r.property.geocode)+'</td>'
+        +'<td class="geo">'+locBtn(g)+esc(r.property.geocode)+'</td>'
         +'<td><span class="chip '+cls+'">'+esc(r.property.propertyType)+'</span></td>'
         +'<td>'+featuresHtml(r.features)+'</td>'
         +'<td><button class="rm" data-rm="'+i+'" title="Remove"><svg class="icon"><use href="#ic-close"/></svg></button></td>'
@@ -519,9 +614,22 @@
     html+='</tbody></table>';
     results.innerHTML=html; wire(); syncMatrix();
   }
+  function locBtn(g){ return '<button class="loc" data-loc="'+esc(g)+'" title="Show on map" aria-label="Show on map"><svg class="icon"><use href="#ic-target"/></svg></button>'; }
   function wire(){
     results.querySelectorAll("[data-rm]").forEach(function(b){
       b.addEventListener("click",function(){ rows.splice(+b.dataset.rm,1); render(); restyle(); });
+    });
+    // Sidebar: clicking a property (anywhere but its buttons) flies the map to it and highlights it there and in the table.
+    // Click the highlighted property again to clear. The locate pin always re-flies.
+    results.querySelectorAll("tbody tr[data-g]").forEach(function(tr){
+      tr.addEventListener("click",function(e){
+        var pin=e.target.closest("[data-loc]");
+        if(pin){ setFocus(pin.dataset.loc,{fly:true,from:"sidebar"}); return; }
+        if(e.target.closest("button")) return;
+        if(String(window.getSelection())) return;      // selecting text to copy shouldn't trigger
+        if(focusG===tr.dataset.g) clearFocus();
+        else setFocus(tr.dataset.g,{fly:true,from:"sidebar"});
+      });
     });
   }
   function setLoading(on){
@@ -863,7 +971,8 @@
     h+='</tr></thead><tbody>';
     rows.forEach(function(r){
       var g=norm(r.property.geocode);
-      h+='<tr data-g="'+esc(g)+'"'+(marked[g]?' class="rowsel"':'')+'><td class="addr lft">'+esc(r.property.address)+'</td>';
+      var trc=(marked[g]?"rowsel ":"")+(focusG===g?"rowfocus":"");
+      h+='<tr data-g="'+esc(g)+'"'+(trc.trim()?' class="'+trc.trim()+'"':'')+'><td class="addr lft">'+locBtn(g)+esc(r.property.address)+'</td>';
       if(showGeo) h+='<td class="lft geo">'+esc(r.property.geocode)+'</td>';
       if(showType) h+='<td class="lft"><span class="chip '+(r.property.cls||"res")+'">'+esc(r.property.propertyType)+'</span></td>';
       deps.forEach(function(d){ h+='<td class="lft">'+esc(depVal(r,d[2]))+'</td>'; });
@@ -1020,6 +1129,7 @@
       notify(tw,'Hid \u201c'+label+'\u201d \u2014 bring it back from Columns');
       return;
     }
+    if((el=t.closest("[data-loc]"))){ setFocus(el.dataset.loc,{fly:true,from:"table"}); return; }   // locate pin: don't toggle the bookmark
     if((el=t.closest("[data-colall]"))){ hiddenCols={}; saveHidden(); syncMatrix(); return; }
     if((el=t.closest("[data-colgroup]"))){
       var on=el.dataset.on==="1", grp=el.dataset.colgroup;
