@@ -1,13 +1,21 @@
 /**
- * MTMatrix — vertical slice backend
- * ---------------------------------
- * A small proxy that sits between the browser and Montana's cadastral API.
- * The browser CANNOT call Montana directly (CORS blocks it), so every request
- * goes:  browser  ->  this server  ->  https://svc.mt.gov/msl/cadastralapi
+ * MTMatrix — backend proxy
+ * ------------------------
+ * Sits between the browser and Montana's public data sources. The browser
+ * CANNOT call Montana directly (no CORS headers), so every request goes:
  *
- * This slice proves the real data path for one residential geocode at a time.
- * It intentionally does NOT do the map, batch lookups, or commercial/ag detail
- * yet — those come after the data path is proven.
+ *   browser  ->  this server  ->  https://svc.mt.gov/msl/cadastralapi   (appraisal detail)
+ *                             ->  gisservice.mt.gov ArcGIS parcels layer (shapes, address search)
+ *
+ * Routes:
+ *   GET /api/slice?geocode=&taxYear=   one property: summary, dwelling + depreciation, unified features[]
+ *   GET /api/parcel?geocode=           one parcel shape (GeoJSON)
+ *   GET /api/parcels?bbox=w,s,e,n      parcel shapes in the map view (simplified)
+ *   GET /api/address?q=                address -> matching parcels (ArcGIS; cadastralapi has no address search)
+ * Also serves public/ (the whole frontend).
+ *
+ * Deployed on Vercel (mt-matrix.vercel.app) as a plain Express app; settings live
+ * in the Vercel dashboard, not in this repo. See README.md.
  */
 
 const express = require("express");
@@ -477,5 +485,5 @@ app.get("/api/address", async (req, res) => {
 app.use(express.static(path.join(__dirname, "public")));
 
 app.listen(PORT, () => {
-  console.log(`\n  MTMatrix slice running:  http://localhost:${PORT}\n`);
+  console.log(`\n  MTMatrix running:  http://localhost:${PORT}\n`);
 });
