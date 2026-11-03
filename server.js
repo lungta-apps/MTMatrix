@@ -8,7 +8,8 @@
  *                             ->  gisservice.mt.gov ArcGIS parcels layer (shapes, address search)
  *
  * Routes:
- *   GET /api/slice?geocode=&taxYear=   one property: summary, dwelling + depreciation, unified features[]
+ *   GET /api/slice?geocode=&taxYear=   one property: summary, dwelling + depreciation, unified features[],
+ *                                      appraisal history (total value per year)
  *   GET /api/parcel?geocode=           one parcel shape (GeoJSON)
  *   GET /api/parcels?bbox=w,s,e,n      parcel shapes in the map view (simplified)
  *   GET /api/address?q=                address -> matching parcels (ArcGIS; cadastralapi has no address search)
@@ -267,7 +268,7 @@ app.get("/api/slice", async (req, res) => {
     const wantDwelling = (summary.dwellingValue || 0) > 0;
     const wantCommercial = (summary.commercialValue || 0) > 0;
 
-    const [dwellings, buildings, commercial] = await Promise.all([
+    const [dwellings, buildings, commercial, history] = await Promise.all([
       wantDwelling
         ? safeArray("/Dwelling", { geocode, taxYear }, "dwelling", warnings)
         : Promise.resolve([]),
@@ -277,7 +278,17 @@ app.get("/api/slice", async (req, res) => {
       wantCommercial
         ? safeArray("/CommercialBuilding", { geocode, taxYear }, "commercial buildings", warnings)
         : Promise.resolve([]),
+      // Appraisal history: every published year at once (no taxYear param).
+      safeArray("/v1/Appraisal/History", { geocode }, "appraisal history", warnings),
     ]);
+
+    // Total appraised value per tax year, oldest first (e.g. 2024, 2025, 2026).
+    // Land/building splits are deliberately left out.
+    const seenYears = new Set();
+    const appraisals = history
+      .map((h) => ({ year: Number(h.taxYear) || null, total: typeof h.finalTotalValue === "number" ? h.finalTotalValue : null }))
+      .filter((a) => a.year && !seenYears.has(a.year) && seenYears.add(a.year))
+      .sort((a, b) => a.year - b.year);
 
     // 4) Residential dwelling detail (for the header card), when present.
     let dwelling = null;
@@ -311,7 +322,7 @@ app.get("/api/slice", async (req, res) => {
       warnings.push("No features or improvements on record for this parcel.");
     }
 
-    return res.json({ property, dwelling, features, warnings });
+    return res.json({ property, dwelling, appraisals, features, warnings });
   } catch (err) {
     const status = err.name === "AbortError" ? 504 : err.status || 502;
     const msg =

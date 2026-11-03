@@ -2,7 +2,7 @@
 
 Compare property features side by side using real appraisal data from the Montana Cadastral API.
 
-Pick parcels on a map (or search by geocode or address) and MTMatrix pulls each one's dwelling additions, buildings and improvements, commercial buildings, ag/forest land, and depreciation ratings into one **Feature Matrix**: one row per property, one column per feature type. It flags properties that don't match the rest, so inconsistencies across a condo or townhome series stand out.
+Pick parcels on a map (or search by geocode or address) and MTMatrix pulls each one's dwelling additions, buildings and improvements, commercial buildings, ag/forest land, depreciation ratings, and appraised values into one **Feature Matrix**: one row per property, one column per feature type. It flags properties that don't match the rest, so inconsistencies across a condo or townhome series stand out.
 
 Built for Montana DOR appraisers, not the general public.
 
@@ -26,9 +26,9 @@ Built for Montana DOR appraisers, not the general public.
 - **Basemap picker.** OpenFreeMap Dark (vector, default, sharp to zoom 20), Esri Dark Gray, or Esri World Imagery. Your choice is remembered; `?basemap=ofm|esri|imagery` in the URL overrides it.
 
 **The Feature Matrix (table)**
-- Rows are properties. Columns are Address, Geocode, Type, the three depreciation ratings (**Condition**, **Desirability**, **Location**), then one column per feature type (for example "Deck, Wood"), with a colored dot showing its group.
+- Rows are properties. Columns are Address, Geocode, Type, the three depreciation ratings (**Condition**, **Desirability**, **Location**), the total appraised value for each published tax year (e.g. **2024 Value**, **2025 Value**, **2026 Value**; years follow the appraisal history automatically), then one column per feature type (for example "Deck, Wood"), with a colored dot showing its group.
 - Each cell lists the actual items: area in sq ft (or acres), or `W × L × H ft` when only dimensions exist, or ✓ when the feature is present with no size. Multiple items show as `×N`.
-- **Change detection.** With 3 or more properties, a red **"N differ"** pill appears on any column where some properties don't match the rest. Click a pill to highlight those cells, or **Check all** for every column. Rule of thumb: if 50%+ of properties have a feature, flag the ones missing it or with a different size than the most common one; if under 50% have it, flag the ones that do.
+- **Change detection.** With 3 or more properties, a red **"N differ"** pill appears on any column where some properties don't match the rest. Click a pill to highlight those cells, or **Check all** for every column. Appraised-value columns are left out (values naturally differ). Rule of thumb: if 50%+ of properties have a feature, flag the ones missing it or with a different size than the most common one; if under 50% have it, flag the ones that do.
 - **Table ↔ map link.** The locate pin on a row (or clicking a property in the side panel or on the map) flies the map to that parcel and highlights it in amber on the map and in every open table.
 - **Bookmarks.** Click a row to mark it in cyan as a place-keeper.
 - **Hide columns.** Header **×** or the **Columns** picker (show/hide by group). Remembered between visits.
@@ -36,7 +36,7 @@ Built for Montana DOR appraisers, not the general public.
 - **Export.** Copy (paste into Excel), CSV, or Excel `.xlsx`. Exports follow the visible columns; geocodes stay text.
 
 **Side panel**
-- Properties list with per-property measurements and an estimated-value total (a rough sum of feature costs, not an appraisal).
+- Properties list with per-property measurements, a line of total appraised values by year, and an estimated-value total (a rough sum of feature costs, not an appraisal).
 
 ---
 
@@ -87,7 +87,7 @@ Leaflet 1.9.4 and SheetJS 0.18.5 (cdnjs); MapLibre GL 5.24.0 and @maplibre/mapli
 
 | Route | What it does | Source |
 |---|---|---|
-| `GET /api/slice?geocode=&taxYear=` | One property: summary, dwelling details + depreciation ratings, and the unified feature list. `taxYear` is optional (defaults to the parcel's newest year). | cadastralapi |
+| `GET /api/slice?geocode=&taxYear=` | One property: summary, dwelling details + depreciation ratings, appraisal history (total value per year), and the unified feature list. `taxYear` is optional (defaults to the parcel's newest year). | cadastralapi |
 | `GET /api/parcel?geocode=` | One parcel's shape as GeoJSON | ArcGIS |
 | `GET /api/parcels?bbox=w,s,e,n` | All parcel shapes in the map view (simplified) | ArcGIS |
 | `GET /api/address?q=` | Address → matching parcels (up to 25) | ArcGIS |
@@ -99,6 +99,7 @@ Leaflet 1.9.4 and SheetJS 0.18.5 (cdnjs); MapLibre GL 5.24.0 and @maplibre/mapli
   "property": { "geocode", "taxYear", "propertyType", "cls", "address", "cityStateZip", "category", "subCategory" },
   "dwelling": { "yearBuilt", "age", "sfla", "grade", "rcnld", "pctGood",
                 "condition", "propertyDesirability", "locationDesirability" },   // null if no dwelling
+  "appraisals": [ { "year", "total" } ],   // from /v1/Appraisal/History, oldest first; land/building omitted
   "features": [ { "group", "description", "area", "areaUnit", "dims", "cost", "year" } ],
   "warnings": [ "…" ]
 }
