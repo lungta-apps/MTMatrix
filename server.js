@@ -9,7 +9,10 @@
  *
  * Routes:
  *   GET /api/slice?geocode=&taxYear=   one property: summary, dwelling + depreciation, unified features[],
- *                                      appraisal history (total value per year)
+ *                                      appraisal history (total value per year), land (Market Land +
+ *                                      Ag/Forest), owners
+ *   GET /api/owner-search?name=&countyId=&taxYear=
+ *                                      parcels whose PRIMARY owner exactly matches the name (case-insensitive)
  *   GET /api/parcel?geocode=           one parcel shape (GeoJSON)
  *   GET /api/parcels?bbox=w,s,e,n      parcel shapes in the map view (simplified)
  *   GET /api/address?q=                address -> matching parcels (ArcGIS; cadastralapi has no address search)
@@ -120,6 +123,69 @@ async function safeArray(endpoint, params, label, warnings) {
     warnings.push(`Couldn't load ${label} (${err.status || err.message}).`);
     return [];
   }
+}
+
+// Like safeArray, but for endpoints that return an object (e.g. /v1/AgForest).
+async function safeObject(endpoint, params, label, warnings) {
+  try {
+    const data = await cadastralFetch(endpoint, params);
+    return data && typeof data === "object" && !Array.isArray(data) ? data : {};
+  } catch (err) {
+    warnings.push(`Couldn't load ${label} (${err.status || err.message}).`);
+    return {};
+  }
+}
+
+const num = (v) => (typeof v === "number" && isFinite(v) ? v : null);
+const txt = (v) => String(v == null ? "" : v).trim();
+
+// ---- Land tab: Market Land items + Ag/Forest items, kept close to the record ----
+function marketLandItems(items) {
+  return (items || []).map((m) => ({
+    method: txt(m.method) || null,       // "Sqft", "Acre", ...
+    type: txt(m.type) || null,           // "Primary Site", "Category 5", ...
+    width: num(m.width),
+    depth: num(m.depth),
+    sqFt: num(m.sqFt),
+    acres: num(m.acres),
+    classCode: txt(m.classCode) || null,
+    value: num(m.value),
+  }));
+}
+function agForestItems(obj) {
+  const list = Array.isArray(obj && obj.agForestLands) ? obj.agForestLands : [];
+  return list.map((a) => ({
+    acreType: txt(a.typeDescription) || txt(a.type) || "(acre type not set)", // "NQ - Non Qualified Ag Land"
+    acres: num(a.acres),
+    classCode: txt(a.classCode) || null,
+    perAcreValue: num(a.perAcreValue),
+    value: num(a.value),
+  }));
+}
+
+// ---- Owner tab ----
+function ownerItems(items) {
+  return (items || [])
+    .map((o) => {
+      const street = [o.address1, o.address2, o.address3].map(txt).filter(Boolean).join(", ");
+      const csz = [txt(o.city), [txt(o.state), txt(o.zip)].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+      return {
+        name: txt(o.fullName) || "(no name)",
+        primary: !!o.isPrimaryOwner,
+        pct: num(o.percentOwnership),
+        interest: txt(o.interestType) || null,
+        mailing: street || null,
+        cityStateZip: csz || null,
+        country: txt(o.country) || null,
+      };
+    })
+    .sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0));
+}
+
+// Owner names compare ignoring capitalization, commas/periods and extra spaces
+// ("Kraus, Ricinda L" == "KRAUS RICINDA L"). Word order and initials still have to match.
+function ownerKey(s) {
+  return String(s || "").toUpperCase().replace(/[.,]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 // ---- feature normalizers: every source becomes the SAME shape ----
@@ -261,6 +327,11 @@ app.get("/api/slice", async (req, res) => {
       cityStateZip: (summary.situsCityStateZip || "").trim(),
       category: summary.category || null,
       subCategory: summary.subCategoryDescription || summary.subCategory || null,
+      // Land tab "Type": category + subcategory, e.g. "RP, Residential Property".
+      landType:
+        [txt(summary.category), txt(summary.subCategoryDescription) || txt(summary.subCategory)]
+          .filter(Boolean)
+          .join(", ") || null,
     };
 
     // 3) Decide which detail endpoints to call from the Summary value fields,
@@ -268,7 +339,7 @@ app.get("/api/slice", async (req, res) => {
     const wantDwelling = (summary.dwellingValue || 0) > 0;
     const wantCommercial = (summary.commercialValue || 0) > 0;
 
-    const [dwellings, buildings, commercial, history] = await Promise.all([
+    const [dwellings, buildings, commercial, history, marketLand, agForest, owners] = await Promise.all([
       wantDwelling
         ? safeArray("/Dwelling", { geocode, taxYear }, "dwelling", warnings)
         : Promise.resolve([]),
@@ -280,7 +351,18 @@ app.get("/api/slice", async (req, res) => {
         : Promise.resolve([]),
       // Appraisal history: every published year at once (no taxYear param).
       safeArray("/v1/Appraisal/History", { geocode }, "appraisal history", warnings),
+      // Land + Owner tabs. Cheap calls; empty results are normal (e.g. condos have no Market Land).
+      safeArray("/MarketLand", { geocode, taxYear }, "market land", warnings),
+      safeObject("/v1/AgForest", { geocode, taxYear }, "ag/forest land", warnings),
+      safeArray("/v1/Properties/Owner", { geocode, taxYear }, "owners", warnings),
     ]);
+
+    const ag = agForestItems(agForest);
+    const land = {
+      market: marketLandItems(marketLand),
+      ag,
+      agTotalAcres: ag.length ? Math.round(ag.reduce((s, a) => s + (a.acres || 0), 0) * 1000) / 1000 : null,
+    };
 
     // Total appraised value per tax year, oldest first (e.g. 2024, 2025, 2026).
     // Land/building splits are deliberately left out.
@@ -322,7 +404,7 @@ app.get("/api/slice", async (req, res) => {
       warnings.push("No features or improvements on record for this parcel.");
     }
 
-    return res.json({ property, dwelling, appraisals, features, warnings });
+    return res.json({ property, dwelling, appraisals, features, land, owners: ownerItems(owners), warnings });
   } catch (err) {
     const status = err.name === "AbortError" ? 504 : err.status || 502;
     const msg =
@@ -330,6 +412,65 @@ app.get("/api/slice", async (req, res) => {
         ? "Montana's server took too long to respond. Try again."
         : `Couldn't reach Montana's cadastral API (${err.message}).`;
     return res.status(status).json({ error: msg });
+  }
+});
+
+// ===========================================================================
+// OWNER SEARCH:  GET /api/owner-search?name=&countyId=&taxYear=
+// cadastralapi /v1/Properties/Search is loose (partial matches, and matches any
+// owner on the parcel, not just the primary one), so we filter its results here:
+// keep only parcels whose PRIMARY owner equals the name, ignoring capitalization,
+// commas/periods and extra spaces. countyId = the geocode's 2-digit county prefix
+// (03 = Yellowstone, 56 = Lincoln). One county per search.
+// ===========================================================================
+app.get("/api/owner-search", async (req, res) => {
+  const name = String(req.query.name || "").replace(/\s+/g, " ").trim();
+  if (name.length < 3) return res.status(400).json({ error: "Enter at least 3 characters of an owner name." });
+  if (name.length > 120) return res.status(400).json({ error: "Owner name is too long." });
+  const cid = String(req.query.countyId || "").trim();
+  if (!/^\d{1,2}$/.test(cid) || +cid < 1 || +cid > 56) return res.status(400).json({ error: "Choose a county." });
+  const countyId = cid.padStart(2, "0");
+  const taxYear = /^\d{4}$/.test(String(req.query.taxYear || "")) ? req.query.taxYear : undefined;
+
+  const want = ownerKey(name);
+  const exact = (list) => {
+    const seen = new Set();
+    return (Array.isArray(list) ? list : [])
+      .filter((r) => r && r.geoCode && ownerKey(r.primaryOwnername) === want)
+      .filter((r) => !seen.has(r.geoCode) && seen.add(r.geoCode))
+      .map((r) => ({
+        geocode: r.geoCode,
+        owner: txt(r.primaryOwnername),
+        address: [r.addressLine1, r.addressLine2].map(txt).filter(Boolean).join(" "),
+        cityStateZip: txt(r.cityStateZip),
+      }));
+  };
+
+  try {
+    // 1) Ask Montana for the name as typed.
+    let matches = exact(await cadastralFetch("/v1/Properties/Search", { countyId, taxYear, ownerName: name }));
+    // 2) Punctuation is stored inconsistently ("KRAUS, RICINDA L" in one county, "KRAUS KENNETH" in
+    //    another), so if nothing matched, ask again with just the first word and filter exactly.
+    if (!matches.length) {
+      const first = want.split(" ")[0];
+      if (first && first.length >= 2 && first !== want) {
+        try {
+          matches = exact(await cadastralFetch("/v1/Properties/Search", { countyId, taxYear, ownerName: first }));
+        } catch (e) {
+          /* a very common first word can be too broad for Montana's search — treat as no match */
+        }
+      }
+    }
+    matches.sort((a, b) => (a.address || "~").localeCompare(b.address || "~") || a.geocode.localeCompare(b.geocode));
+    return res.json({ matches, count: matches.length, countyId });
+  } catch (err) {
+    const status = err.name === "AbortError" ? 504 : 502;
+    return res.status(status).json({
+      error:
+        status === 504
+          ? "Montana's owner search took too long. Try again."
+          : `Owner search failed (${err.message}).`,
+    });
   }
 });
 
@@ -352,16 +493,23 @@ async function arcgisFetch(params) {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, { headers: { "User-Agent": USER_AGENT }, signal: controller.signal });
-    if (!res.ok) { const e = new Error(`ArcGIS returned ${res.status}`); e.status = res.status; throw e; }
-    const data = await res.json();
-    if (data && data.error) { const e = new Error(data.error.message || "ArcGIS query error"); e.status = 502; throw e; }
-    cache.set(key, { at: Date.now(), data });
-    return data;
-  } finally { clearTimeout(timer); }
+  // Montana's ArcGIS service intermittently answers "Error performing query operation";
+  // one short retry clears most of those.
+  for (let attempt = 1; ; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": USER_AGENT }, signal: controller.signal });
+      if (!res.ok) { const e = new Error(`ArcGIS returned ${res.status}`); e.status = res.status; e.retry = res.status >= 500; throw e; }
+      const data = await res.json();
+      if (data && data.error) { const e = new Error(data.error.message || "ArcGIS query error"); e.status = 502; e.retry = true; throw e; }
+      cache.set(key, { at: Date.now(), data });
+      return data;
+    } catch (err) {
+      if (attempt >= 2 || !err.retry) throw err;
+      await new Promise((r) => setTimeout(r, 400));
+    } finally { clearTimeout(timer); }
+  }
 }
 
 // ArcGIS polygon rings -> GeoJSON FeatureCollection (Leaflet reads this directly).
@@ -383,14 +531,17 @@ function arcgisToGeoJSON(features) {
 app.get("/api/parcel", async (req, res) => {
   const geocode = cleanGeocode(req.query.geocode);
   if (!geocode) return res.status(400).json({ error: "Invalid geocode." });
+  // The layer stores PARCELID without hyphens, so try that form first. One variant
+  // erroring (ArcGIS sometimes errors on a particular form) doesn't stop the others.
   const variants = [...new Set([
-    geocode,
-    geocode.replace(/-/g, ""),
-    geocode.toUpperCase(),
     geocode.replace(/-/g, "").toUpperCase(),
+    geocode.replace(/-/g, ""),
+    geocode,
+    geocode.toUpperCase(),
   ])];
-  try {
-    for (const v of variants) {
+  let lastErr = null;
+  for (const v of variants) {
+    try {
       const data = await arcgisFetch({
         where: `PARCELID='${v}'`,
         outFields: "PARCELID",
@@ -401,11 +552,14 @@ app.get("/api/parcel", async (req, res) => {
       if (Array.isArray(data.features) && data.features.length > 0) {
         return res.json(arcgisToGeoJSON(data.features));
       }
+    } catch (err) {
+      lastErr = err;
     }
-    return res.json({ type: "FeatureCollection", features: [] });
-  } catch (err) {
-    return res.status(err.status || 502).json({ error: `Parcel geometry lookup failed (${err.message}).` });
   }
+  if (lastErr) {
+    return res.status(lastErr.status || 502).json({ error: `Parcel geometry lookup failed (${lastErr.message}).` });
+  }
+  return res.json({ type: "FeatureCollection", features: [] });
 });
 
 // All parcels intersecting a map view. bbox = west,south,east,north (lng/lat).

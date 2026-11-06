@@ -123,10 +123,13 @@
   .chip.res{color:var(--cyan-200);border-color:var(--line-node);background:rgba(34,194,224,.08)}
   .chip.comm{color:var(--amber-400);border-color:rgba(230,172,94,.4);background:rgba(230,172,94,.08)}
   .chip.vac{color:var(--ink-3);border-color:rgba(131,149,173,.35);background:rgba(131,149,173,.08)}
+  .chip.condo{color:var(--violet-300);border-color:rgba(154,99,239,.45);background:rgba(154,99,239,.10)}
+  .chip.mobile{color:var(--blue-400);border-color:rgba(74,157,248,.4);background:rgba(74,157,248,.08)}
+  .chip.other{color:var(--magenta-400);border-color:rgba(224,97,201,.4);background:rgba(224,97,201,.08)}
   .chip.ag{color:var(--mint-400);border-color:rgba(78,217,176,.4);background:rgba(78,217,176,.08)}
   .add{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .add-name{color:var(--text-body);font-weight:500}
-  .add-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-muted)}
+  .add-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);white-space:nowrap}
   .add-cost{font-family:var(--font-mono);font-size:12px;color:var(--cyan-300);font-variant-numeric:tabular-nums}
   .none{color:var(--ink-4);font-style:italic;font-size:12px}
   .fgroup{margin-bottom:10px}.fgroup:last-child{margin-bottom:0}
@@ -239,6 +242,41 @@
   .gdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
   .gdot.g-add{background:var(--cyan-300)} .gdot.g-bld{background:var(--violet-300)}
   .gdot.g-com{background:var(--amber-400)} .gdot.g-ag{background:var(--mint-400)}
+  /* Land + Owner tabs */
+  .fg-label.g-ml{color:var(--blue-400);border-color:rgba(74,157,248,.4);background:rgba(74,157,248,.08)}
+  .gdot.g-ml{background:var(--blue-400)} .gdot.g-own{background:var(--violet-300)} .gdot.g-prop{background:var(--ink-3)}
+  .add.tot .add-name{color:var(--text-primary);font-weight:600}
+  .add.tot .add-meta{color:var(--mint-400)}
+  .own{margin-bottom:9px}.own:last-child{margin-bottom:0}
+  .own-name{color:var(--text-primary);font-weight:600}
+  .own-tag{font:600 9px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--violet-300);border:1px solid rgba(154,99,239,.4);background:rgba(154,99,239,.08);border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+  .own-meta{display:block;font-size:11.5px;color:var(--text-muted);line-height:1.45}
+  /* Land tab: land-type filter chips + totals card */
+  .tfilter{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px}
+  .tfilter .eyebrow{margin-right:4px}
+  .tchip{cursor:pointer;font-family:var(--font-core)}
+  .tchip b{font:700 10px var(--font-mono);opacity:.8;margin-left:2px}
+  .tchip.off{opacity:.38;filter:grayscale(.9);text-decoration:line-through}
+  .tchip:focus-visible{outline:none;box-shadow:0 0 0 2px var(--cyan-400)}
+  .tf-all{background:none;border:1px solid var(--line-hairline);border-radius:999px;color:var(--text-muted);font:500 10.5px var(--font-mono);padding:3px 9px;cursor:pointer}
+  .tf-all:hover{color:var(--text-primary);border-color:var(--line-node)}
+  .tf-note{margin:0 0 12px;font-size:12px;color:var(--amber-400)}
+  .tf-note button{background:none;border:none;color:var(--cyan-300);cursor:pointer;font:inherit;text-decoration:underline;padding:0 0 0 4px}
+  .totals{margin:0 0 14px;padding:12px 14px;border:1px solid var(--line-node);border-radius:var(--radius-md);background:rgba(34,194,224,.06);box-shadow:var(--inner-top)}
+  .tot-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;color:var(--text-primary);font-weight:700;font-size:13px}
+  .tot-head .tot-n{font:500 11px var(--font-mono);color:var(--text-muted)}
+  .tot-head .btn{margin-left:auto;padding:4px 10px;font-size:11.5px}
+  .tot-sec{font:600 9px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;margin:8px 0 3px}
+  .tot-sec.ml{color:var(--blue-400)} .tot-sec.ag{color:var(--mint-400)} .tot-sec.all{color:var(--cyan-300)}
+  .tot-row{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:2px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+  .tot-row:last-child{border-bottom:none}
+  .tot-row .v{font-family:var(--font-mono);color:var(--cyan-200);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .tot-row.big{font-weight:700;color:var(--text-primary)} .tot-row.big .v{color:var(--cyan-100)}
+  .tot-foot{margin-top:6px;font-size:10.5px;color:var(--text-muted)}
+  .chip.wrap{white-space:normal;line-height:1.35}
+  .search input#owner{width:190px;font-family:var(--font-core);letter-spacing:0;text-transform:uppercase}
+  .search input#owner::placeholder{text-transform:none}
+  select#county{max-width:170px}
 
   .addr-item{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:11px 14px;border:1px solid var(--line-hairline);border-radius:var(--radius-md);background:var(--bg-node);color:var(--text-body);cursor:pointer;margin-bottom:8px;transition:all .15s var(--ease)}
   .addr-item:last-child{margin-bottom:0}
@@ -271,6 +309,8 @@
   <symbol id="ic-cols" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></symbol>
   <symbol id="ic-diff" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/><path d="M14 12h7"/></symbol>
   <symbol id="ic-dock" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></symbol>
+  <symbol id="ic-sum" viewBox="0 0 24 24"><path d="M18 5H6l6 7-6 7h12"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
 </defs></svg>
 
 <div class="app">
@@ -283,6 +323,10 @@
     <form class="search" id="searchForm">
       <div class="inp"><svg class="icon"><use href="#ic-search"/></svg>
         <input id="geocode" name="geocode" placeholder="Enter a geocode or address…" autocomplete="off" spellcheck="false"></div>
+      <div class="inp" title="Primary owner, exactly as on the record (capitalization doesn't matter), e.g. KRAUS, RICINDA L"><svg class="icon"><use href="#ic-user"/></svg>
+        <input id="owner" name="owner" placeholder="or primary owner name…" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label for="county">County</label>
+        <select id="county" title="County for the owner search"></select></div>
       <div class="field"><label for="taxyear">Tax year</label>
         <select id="taxyear"><option>2026</option><option>2025</option><option>2024</option></select></div>
       <button class="btn primary" id="goBtn" type="submit"><svg class="icon"><use href="#ic-search"/></svg> Look up</button>
@@ -309,13 +353,14 @@
 
     <section class="panel">
       <div class="tabs">
-        <button class="tab active">Features</button>
+        <button class="tab active" data-tab="features">Features</button>
         <button class="tab" disabled>Summary<span class="soon">SOON</span></button>
-        <button class="tab" disabled>Owner<span class="soon">SOON</span></button>
-        <button class="tab" disabled>Land<span class="soon">SOON</span></button>
+        <button class="tab" data-tab="owner">Owner</button>
+        <button class="tab" data-tab="land">Land</button>
       </div>
       <div class="panel-head res-head"><h2><svg class="icon"><use href="#ic-rows"/></svg> Properties</h2>
         <div class="ph-spacer"></div>
+        <button class="btn" id="totBtn" hidden title="Total the land of the properties listed below"><svg class="icon"><use href="#ic-sum"/></svg> Totals</button>
         <button class="btn" id="tableBtn"><svg class="icon"><use href="#ic-grid"/></svg> Table</button>
         <button class="btn" id="copyBtn"><svg class="icon"><use href="#ic-copy"/></svg> Copy</button>
         <button class="btn" id="clearBtn"><svg class="icon"><use href="#ic-clear"/></svg> Clear</button>
@@ -336,7 +381,7 @@
 <div class="modal floating" id="tableModal" hidden>
   <div class="modal-panel">
     <div class="modal-head">
-      <h2><svg class="icon"><use href="#ic-grid"/></svg> Feature Matrix</h2>
+      <h2><svg class="icon"><use href="#ic-grid"/></svg> <span id="mtTitle">Feature Matrix</span></h2>
       <div class="ph-spacer"></div>
       <button class="btn" id="mtCopy"><svg class="icon"><use href="#ic-copy"/></svg> Copy</button>
       <button class="btn" id="mtCsv"><svg class="icon"><use href="#ic-download"/></svg> CSV</button>
@@ -376,6 +421,21 @@
   var lastError = null;
   var focusG = null;   // table <-> map highlight (see "Table ↔ map link")
   var MINZOOM = 16;
+  // Sidebar tabs: every tab shows the SAME listed parcels, just different information about them.
+  var TABS={features:"Feature Matrix",land:"Land Matrix",owner:"Owner Matrix"};
+  var activeTab="features";
+  try{ var st=localStorage.getItem("mtmatrix.tab"); if(TABS[st]) activeTab=st; }catch(e){}
+  // The table window is locked to the tab that was showing when it opened.
+  var tableMode="features";
+  // Montana county numbers = the 2-digit geocode prefix (license-plate order); owner search uses them as countyId.
+  var COUNTIES={"01":"Silver Bow","02":"Cascade","03":"Yellowstone","04":"Missoula","05":"Lewis and Clark","06":"Gallatin",
+    "07":"Flathead","08":"Fergus","09":"Powder River","10":"Carbon","11":"Phillips","12":"Hill","13":"Ravalli","14":"Custer",
+    "15":"Lake","16":"Dawson","17":"Roosevelt","18":"Beaverhead","19":"Chouteau","20":"Valley","21":"Toole","22":"Big Horn",
+    "23":"Musselshell","24":"Blaine","25":"Madison","26":"Pondera","27":"Richland","28":"Powell","29":"Rosebud","30":"Deer Lodge",
+    "31":"Teton","32":"Stillwater","33":"Treasure","34":"Sheridan","35":"Sanders","36":"Judith Basin","37":"Daniels","38":"Glacier",
+    "39":"Fallon","40":"Sweet Grass","41":"McCone","42":"Carter","43":"Broadwater","44":"Wheatland","45":"Prairie","46":"Granite",
+    "47":"Meagher","48":"Liberty","49":"Park","50":"Garfield","51":"Jefferson","52":"Wibaux","53":"Golden Valley","54":"Mineral",
+    "55":"Petroleum","56":"Lincoln"};
 
   var $ = function(id){ return document.getElementById(id); };
   var results = $("results"), toast = $("toast");
@@ -444,8 +504,10 @@
   window.addEventListener("resize", function(){ map.invalidateSize(); });
 
   function selSet(){ var s={}; rows.forEach(function(r){ s[norm(r.property.geocode)]=true; }); return s; }
+  // Listed parcels the map should highlight: everything except land types switched off in the Land tab filter.
+  function mapSet(){ var s={}; rows.forEach(function(r){ if(!(typeOff && typeOff[landTypeOf(r)])) s[norm(r.property.geocode)]=true; }); return s; }
   function parcelStyle(feat){
-    var sel = selSet()[norm(feat.properties.PARCELID)];
+    var sel = mapSet()[norm(feat.properties.PARCELID)];
     return sel
       ? {color:"#6ae6f7",weight:2,opacity:1,fillColor:"#22c2e0",fillOpacity:0.25}
       : {color:"#3fd8f0",weight:0.8,opacity:0.35,fillColor:"#1e2942",fillOpacity:0.05};
@@ -473,7 +535,61 @@
       layer.on("mouseout",function(){ layer.setStyle(parcelStyle(feat)); });
     }
   }).addTo(map);
-  function restyle(){ parcelLayer.setStyle(parcelStyle); }
+  function restyle(){ parcelLayer.setStyle(parcelStyle); drawListed(); }
+
+  // Listed parcels drawn on their own (non-clickable) layer while zoomed OUT, so the results of a
+  // county-wide owner search glow on the map even before the clickable parcels load (zoom 16+).
+  var LISTED_STYLE={color:"#6ae6f7",weight:2,opacity:1,fillColor:"#22c2e0",fillOpacity:0.25,interactive:false};
+  var listedLayer=L.layerGroup(), listedDrawn={};
+  function listedVisibility(){
+    var show=map.getZoom()<MINZOOM;
+    if(show && !map.hasLayer(listedLayer)) listedLayer.addTo(map);
+    else if(!show && map.hasLayer(listedLayer)) map.removeLayer(listedLayer);
+    if(show && focusLayer) focusLayer.eachLayer(function(l){ if(l.bringToFront) l.bringToFront(); });
+  }
+  var listedRun=null;
+  // noShape[k]: Montana's parcel map has no shape for it. shapeFail[k]: lookups that errored (retried up to 3 times).
+  var noShape={}, shapeFail={}, retryTimer=null;
+  function unplaceable(k){ return !!noShape[k] || (shapeFail[k]||0)>=1; }
+  function drawListed(){
+    var want=mapSet();
+    Object.keys(listedDrawn).forEach(function(k){ if(!want[k]){ listedLayer.removeLayer(listedDrawn[k]); delete listedDrawn[k]; } });
+    var todo=rows.filter(function(r){ return want[norm(r.property.geocode)]; }).map(function(r){ return r.property.geocode; }).filter(function(g){
+      var k=norm(g); return !listedDrawn[k] && !noShape[k] && (shapeFail[k]||0)<3;
+    });
+    if(!todo.length) return listedRun || Promise.resolve();
+    var i=0;
+    async function worker(){
+      while(i<todo.length){
+        var g=todo[i++], k=norm(g);
+        try{
+          var fc=loadedShape(k) || await getShape(g);
+          if(!fc){ noShape[k]=true; continue; }
+          delete shapeFail[k];
+          if(mapSet()[k] && !listedDrawn[k]){
+            // Shape + a dot at its center, so small parcels stay findable when the map is zoomed out to a whole county.
+            var gj=L.geoJSON(fc,{style:function(){ return LISTED_STYLE; },interactive:false});
+            var c=gj.getBounds().getCenter();
+            listedDrawn[k]=L.featureGroup([gj,L.circleMarker(c,{radius:5,color:"#d5fbff",weight:1.5,fillColor:"#3fd8f0",fillOpacity:.9,interactive:false})]).addTo(listedLayer);
+          }
+        }catch(e){ shapeFail[k]=(shapeFail[k]||0)+1; }
+      }
+    }
+    var run=Promise.all(Array.from({length:Math.min(6,todo.length)},worker)).then(function(){
+      listedVisibility(); render();
+      // Montana's map service is flaky: try failed lookups again shortly (3 tries total).
+      var again=rows.some(function(r){ var k=norm(r.property.geocode); return !listedDrawn[k] && !noShape[k] && shapeFail[k] && shapeFail[k]<3; });
+      clearTimeout(retryTimer); if(again) retryTimer=setTimeout(drawListed,3000);
+    });
+    listedRun=run;
+    return run;
+  }
+  // Fit the map to a set of listed parcels (used after an owner search).
+  function fitToListed(geocodes){
+    var b=null;
+    geocodes.forEach(function(g){ var l=listedDrawn[norm(g)]; if(l){ var lb=l.getBounds(); if(lb.isValid()) b=b?b.extend(lb):L.latLngBounds(lb.getSouthWest(),lb.getNorthEast()); } });
+    if(b) map.fitBounds(b,{maxZoom:17,padding:[40,40]});
+  }
 
   var loadTimer=null;
   function scheduleLoad(){ clearTimeout(loadTimer); loadTimer=setTimeout(loadParcelsInView,350); }
@@ -495,6 +611,8 @@
     }catch(e){ setHint("Could not load parcels"); }
   }
   map.on("moveend", scheduleLoad);
+  map.on("moveend", function(){ if(rows.length) render(); });
+  map.on("zoomend", function(){ listedVisibility(); });
 
   // Parcel shapes by hyphen-less geocode, so locating the same parcel twice doesn't refetch.
   var shapeCache={};
@@ -503,7 +621,8 @@
     if(shapeCache[k]) return shapeCache[k];
     var res=await fetch("/api/parcel?geocode="+encodeURIComponent(geocode));
     var fc=await res.json();
-    if(!res.ok || !fc.features || !fc.features.length) return null;
+    if(!res.ok) throw new Error(fc.error||("Parcel lookup failed ("+res.status+")"));   // lookup failed: may work on retry
+    if(!fc.features || !fc.features.length) return null;                                // no shape on Montana's parcel map
     shapeCache[k]=fc;
     return fc;
   }
@@ -601,10 +720,197 @@
     return out;
   }
 
-  function render(){
+  // ---------- Land tab ----------
+  // Acres to at most 3 decimals ("0.048", "320").
+  function acresTxt(a){ return a==null ? "" : Number(a).toLocaleString("en-US",{maximumFractionDigits:3})+" ac"; }
+  // Market Land size, following its method: Sqft → square feet, Acre → acres, otherwise whatever is recorded.
+  function mlSize(m){
+    var byAcre=/acre/i.test(m.method||"");
+    if(byAcre && m.acres>0) return acresTxt(m.acres);
+    if(m.sqFt>0) return Number(m.sqFt).toLocaleString("en-US")+" sf";
+    if(m.acres>0) return acresTxt(m.acres);
+    var d=[m.width,m.depth].filter(function(v){ return v>0; });
+    return d.length ? d.join(" × ")+" ft" : "";
+  }
+  // Market Land size split by method: Acre method → acres; anything else (Sqft, front foot…) → square feet.
+  function mlByAcre(m){ return /acre/i.test(m.method||""); }
+  function mlSqft(m){ return !mlByAcre(m) && m.sqFt>0 ? Number(m.sqFt) : null; }
+  function mlAcres(m){ return mlByAcre(m) && m.acres>0 ? Number(m.acres) : null; }
+  function mlItems(r){ return (r.land && r.land.market) || []; }
+  // Ag/Forest items arrive as many line-items; total the acres per acre type (first-seen order).
+  function agGroups(r){
+    var out=[], by={};
+    ((r.land && r.land.ag) || []).forEach(function(a){
+      var k=a.acreType||"(acre type not set)";
+      if(!by[k]){ by[k]={type:k,acres:0,count:0}; out.push(by[k]); }
+      by[k].acres+=Number(a.acres)||0; by[k].count++;
+    });
+    out.forEach(function(g){ g.acres=Math.round(g.acres*1000)/1000; });
+    return out;
+  }
+  function agTotal(r){ return r.land && r.land.agTotalAcres!=null ? r.land.agTotalAcres : null; }
+  function landHtml(r){
+    if(!r.land) return '<span class="none">— look this parcel up again to load land —</span>';
+    var ml=mlItems(r), ag=agGroups(r), out="";
+    if(ml.length){
+      out+='<div class="fgroup"><span class="fg-label g-ml">Market Land</span>'+ml.map(function(m){
+        return '<div class="add"><span class="add-name">'+esc(m.type||"(type not set)")+'</span>'
+          +'<span class="add-meta">'+esc([m.method,mlSize(m)].filter(Boolean).join(" · "))+'</span></div>';
+      }).join("")+'</div>';
+    }
+    if(ag.length){
+      out+='<div class="fgroup"><span class="fg-label g-ag">Ag / Forest Land</span>'+ag.map(function(g){
+        return '<div class="add"><span class="add-name">'+esc(g.type)+'</span><span class="add-meta">'+esc(acresTxt(g.acres))+'</span></div>';
+      }).join("")
+        +'<div class="add tot"><span class="add-name">Total</span><span class="add-meta">'+esc(acresTxt(agTotal(r)))+'</span></div></div>';
+    }
+    return out || '<span class="none">— no land records —</span>';
+  }
+  // ---------- Owner tab ----------
+  function ownersOf(r){ return r.owners || []; }
+  function primaryOwner(r){ var o=ownersOf(r); return o.filter(function(x){ return x.primary; })[0] || o[0] || null; }
+  function ownerHtml(r){
+    if(!r.owners) return '<span class="none">— look this parcel up again to load owners —</span>';
+    var o=ownersOf(r);
+    if(!o.length) return '<span class="none">— no owner record —</span>';
+    return o.map(function(x){
+      var meta=[x.pct!=null?(x.pct+"%"):"", x.interest||""].filter(Boolean).join(" · ");
+      return '<div class="own"><span class="own-name">'+esc(x.name)+'</span>'+(x.primary?'<span class="own-tag">Primary</span>':'')
+        +(meta?'<span class="own-meta">'+esc(meta)+'</span>':'')
+        +(x.mailing||x.cityStateZip?'<span class="own-meta">'+esc([x.mailing,x.cityStateZip].filter(Boolean).join(", "))+'</span>':'')
+        +'</div>';
+    }).join("");
+  }
+  function setTab(t){
+    if(!TABS[t]) t="features";
+    activeTab=t;
+    try{ localStorage.setItem("mtmatrix.tab",t); }catch(e){}
+    document.querySelectorAll(".tabs .tab[data-tab]").forEach(function(b){ b.classList.toggle("active",b.dataset.tab===t); });
+    $("totBtn").hidden = t!=="land";
+    render();
+  }
+  $("totBtn").addEventListener("click",function(){
+    if(!rows.length){ showToast("Look up some properties first"); return; }
+    totalsOn=!totalsOn; this.classList.toggle("on",totalsOn); render(true);
+    if(totalsOn) results.scrollTop=0;
+  });
+
+  // ---------- Sidebar follows the map view ----------
+  // Only properties whose parcel shape overlaps the current map view are listed in the sidebar; the footer
+  // shows shown/total (e.g. 3/15). A property whose shape isn't known yet (or has none) always stays listed.
+  // The Matrix tables and their exports still cover the whole list.
+  var boundsCache={};
+  // Keys of the properties the sidebar is showing (set by render). The Matrix tables + exports use the same set.
+  var viewKeys=null;
+  function mRows(){ return viewKeys ? rows.filter(function(r){ return viewKeys[norm(r.property.geocode)]; }) : rows; }
+  function rowBounds(g){
+    var k=norm(g);
+    if(boundsCache[k]) return boundsCache[k];
+    var l=listedDrawn[k], fc=null;
+    if(l) return (boundsCache[k]=l.getBounds());
+    fc=shapeCache[k] || loadedShape(k);
+    if(fc){ try{ return (boundsCache[k]=L.geoJSON(fc).getBounds()); }catch(e){} }
+    return null;
+  }
+  // true / false, or null = can't be placed on the map (no shape, or the lookup keeps failing).
+  function inView(r){
+    var b=rowBounds(r.property.geocode);
+    if(!b || !b.isValid()) return unplaceable(norm(r.property.geocode)) ? null : true;   // still loading → keep listed
+    try{ return map.getBounds().intersects(b); }catch(e){ return true; }
+  }
+
+  // ---------- Land type filter + land totals ----------
+  // typeOff[landType]=true hides that land type. It applies to the one shared list (sidebar on every tab,
+  // the tables and exports, the footer count), like the map-view filter. Chips live on the Land tab.
+  var typeOff={}, totalsOn=false;
+  function landTypeOf(r){ return r.property.landType || r.property.propertyType || "(no land type)"; }
+  function typeFiltering(){ return rows.some(function(r){ return typeOff[landTypeOf(r)]; }); }
+  function fmtN(x,dec){ return Number(x).toLocaleString("en-US",{maximumFractionDigits:dec||0}); }
+  // Totals for a set of properties: Market Land sq ft + acres (by method), Ag/Forest acres per acre type.
+  function landTotals(list){
+    var t={n:list.length,withLand:0,sqft:0,mlAcres:0,ag:{},agTypes:[],agTotal:0};
+    list.forEach(function(r){
+      var any=false;
+      mlItems(r).forEach(function(m){ var a=mlSqft(m), b=mlAcres(m); if(a!=null){ t.sqft+=a; any=true; } if(b!=null){ t.mlAcres+=b; any=true; } });
+      agGroups(r).forEach(function(g){ if(!(g.type in t.ag)){ t.ag[g.type]=0; t.agTypes.push(g.type); } t.ag[g.type]+=g.acres; t.agTotal+=g.acres; any=true; });
+      if(any) t.withLand++;
+    });
+    t.agTypes.sort();
+    t.allAcres=t.mlAcres+t.agTotal+t.sqft/43560;
+    return t;
+  }
+  function totalsHtml(list){
+    var t=landTotals(list), h='';
+    h+='<div class="totals"><div class="tot-head"><svg class="icon" style="width:16px;height:16px;color:var(--cyan-300)"><use href="#ic-sum"/></svg>Land totals'
+      +'<span class="tot-n">'+t.n+' propert'+(t.n===1?'y':'ies')+(t.withLand<t.n?' · '+(t.n-t.withLand)+' without land records':'')+'</span>'
+      +'<button class="btn" data-act="copytot" title="Copy these totals">Copy</button></div>';
+    if(!t.withLand) return h+'<div class="none">No land records on these properties.</div></div>';
+    if(t.sqft || t.mlAcres){
+      h+='<div class="tot-sec ml">Market Land</div>';
+      if(t.sqft) h+='<div class="tot-row"><span>Square feet</span><span class="v">'+fmtN(t.sqft)+' sf</span></div>';
+      if(t.mlAcres) h+='<div class="tot-row"><span>Acres</span><span class="v">'+fmtN(t.mlAcres,3)+' ac</span></div>';
+    }
+    if(t.agTypes.length){
+      h+='<div class="tot-sec ag">Ag / Forest Land</div>';
+      t.agTypes.forEach(function(k){ h+='<div class="tot-row"><span>'+esc(k)+'</span><span class="v">'+fmtN(t.ag[k],3)+' ac</span></div>'; });
+      h+='<div class="tot-row big"><span>Total ag / forest</span><span class="v">'+fmtN(t.agTotal,3)+' ac</span></div>';
+    }
+    h+='<div class="tot-sec all">All land</div><div class="tot-row big"><span>Total</span><span class="v">'+fmtN(t.allAcres,3)+' ac</span></div>';
+    if(t.sqft) h+='<div class="tot-foot">Square feet converted at 43,560 sf per acre for the all-land total.</div>';
+    return h+'</div>';
+  }
+  function totalsText(list){
+    var t=landTotals(list), L=["Land totals\t"+t.n+" properties"];
+    if(t.sqft) L.push("Market Land square feet\t"+Math.round(t.sqft));
+    if(t.mlAcres) L.push("Market Land acres\t"+Math.round(t.mlAcres*1000)/1000);
+    t.agTypes.forEach(function(k){ L.push(k+" (acres)\t"+Math.round(t.ag[k]*1000)/1000); });
+    if(t.agTypes.length) L.push("Total ag / forest acres\t"+Math.round(t.agTotal*1000)/1000);
+    L.push("All land acres\t"+Math.round(t.allAcres*1000)/1000);
+    return L.join("\n");
+  }
+  function typeFilterHtml(flags){
+    var types=[], cnt={};
+    var mapFiltering=flags.some(function(f){ return f===false; });
+    rows.forEach(function(r,i){ var k=landTypeOf(r); if(!(k in cnt)){ cnt[k]=0; types.push(k); } if(flags[i]===true || (flags[i]===null && !mapFiltering)) cnt[k]++; });
+    if(types.length<2 && !typeFiltering()) return "";
+    types.sort();
+    return '<div class="tfilter"><span class="eyebrow">Land type</span>'
+      +types.map(function(k){
+        return '<button class="chip tchip '+typeCls(k)+(typeOff[k]?' off':'')+'" data-tf="'+esc(k)+'" title="'+(typeOff[k]?'Show':'Hide')+' '+esc(k)+' \u00b7 Shift-click to show only this type">'
+          +esc(k)+' <b>'+cnt[k]+'</b></button>';
+      }).join("")
+      +(typeFiltering()?'<button class="tf-all" data-tf="__all">Show all</button>':'')+'</div>';
+  }
+  // Clicks on the filter chips / totals Copy (delegated once; the sidebar is re-drawn often).
+  results.addEventListener("click",function(e){
+    var el=e.target.closest("[data-tf]");
+    if(el){
+      var k=el.dataset.tf;
+      if(k==="__all") typeOff={};
+      else if(e.shiftKey){ typeOff={}; rows.forEach(function(r){ var t=landTypeOf(r); if(t!==k) typeOff[t]=true; }); }
+      else if(typeOff[k]) delete typeOff[k]; else typeOff[k]=true;
+      render(); restyle(); return;
+    }
+    if(e.target.closest("[data-act='copytot']")){
+      var txt=totalsText(mRows());
+      try{ navigator.clipboard.writeText(txt).then(function(){ showToast("Totals copied"); },function(){ showToast("Copy blocked by browser"); }); }catch(err){ showToast("Copy blocked by browser"); }
+    }
+  });
+
+  // sidebarOnly: repaint just the sidebar + footer (map panning), not the open Matrix table.
+  function render(sidebarOnly){
     var featCount=0, featCost=0;
     rows.forEach(function(r){ (r.features||[]).forEach(function(f){ featCount++; featCost+=Number(f.cost)||0; }); });
-    $("stProps").textContent=rows.length;
+    var flags=rows.map(inView);
+    // Parcels that can't be placed on the map are listed only while nothing else is filtered out,
+    // so the sidebar and the shown/total count always agree with what's on the map.
+    var filtering=flags.some(function(f){ return f===false; });
+    var shownFlags=flags.map(function(f,i){ return (f===null ? !filtering : f) && !typeOff[landTypeOf(rows[i])]; });
+    var shown=shownFlags.filter(Boolean).length;
+    viewKeys={}; rows.forEach(function(r,i){ if(shownFlags[i]) viewKeys[norm(r.property.geocode)]=true; });
+    var offMap=rows.filter(function(r,i){ return flags[i]===null; });
+    $("stProps").textContent = shown<rows.length ? shown+"/"+rows.length : rows.length;
+    $("stProps").title = shown<rows.length ? shown+" of "+rows.length+" properties shown"+(typeFiltering()?" (land type filter on":" (")+(filtering?(typeFiltering()?", ":"")+"rest are outside the map view)":")") : "";
     $("stFeats").textContent=featCount;
     $("stCost").textContent=money(featCost);
     // A highlighted parcel that left the list (removed or cleared) loses its highlight.
@@ -614,23 +920,50 @@
     if(lastError){ html+='<div class="banner err"><svg class="icon"><use href="#ic-warn"/></svg><span>'+esc(lastError)+'</span></div>'; }
     if(rows.length===0){
       html+='<div class="empty"><svg class="icon"><use href="#ic-target"/></svg>'
-        +'<p>Search a <strong style="color:var(--text-body)">geocode</strong>, or click parcels on the map, to pull their real features. Each one stacks here.</p>'
+        +'<p>Search a <strong style="color:var(--text-body)">geocode</strong>, an address, or a <strong style="color:var(--text-body)">primary owner</strong> (pick the county), or click parcels on the map. Each one stacks here &mdash; the Features, Owner and Land tabs all show the same parcels.</p>'
         +'<p>Try <code>03-0926-11-4-09-28-0D18</code></p></div>';
-      results.innerHTML=html; wire(); syncMatrix(); return;
+      results.innerHTML=html; wire(); if(!sidebarOnly) syncMatrix(); return;
     }
-    html+='<table><thead><tr><th>Address</th><th>Geocode</th><th>Type</th><th>Features</th><th></th></tr></thead><tbody>';
+    if(activeTab==="land"){
+      html+=typeFilterHtml(flags);
+      if(totalsOn) html+=totalsHtml(rows.filter(function(r,i){ return shownFlags[i]; }));
+    }else if(typeFiltering()){
+      html+='<div class="tf-note">Land type filter is on (set on the Land tab).<button data-tf="__all">Show all types</button></div>';
+    }
+    var lastHead={features:"Features",land:"Land",owner:"Owners"}[activeTab];
+    html+='<table><thead><tr><th>Address</th><th>Geocode</th><th>Type</th><th>'+lastHead+'</th><th></th></tr></thead><tbody>';
     rows.forEach(function(r,i){
-      var cls=r.property.cls||"res", g=norm(r.property.geocode);
+      if(!shownFlags[i]) return;
+      var g=norm(r.property.geocode);
+      var typeTxt=activeTab==="land" ? (r.property.landType||r.property.propertyType) : r.property.propertyType;
+      var body=activeTab==="land" ? landHtml(r) : activeTab==="owner" ? ownerHtml(r) : featuresHtml(r.features);
       html+='<tr data-g="'+esc(g)+'"'+(focusG===g?' class="rowfocus"':'')+'>'
         +'<td class="addr">'+esc(r.property.address)+'<small>'+esc(r.property.cityStateZip)+'</small>'+apprLine(r)+'</td>'
         +'<td class="geo">'+locBtn(g)+esc(r.property.geocode)+'</td>'
-        +'<td><span class="chip '+cls+'">'+esc(r.property.propertyType)+'</span></td>'
-        +'<td>'+featuresHtml(r.features)+'</td>'
+        +'<td><span class="chip '+typeCls(typeTxt)+(activeTab==="land"?' wrap':'')+'">'+esc(typeTxt)+'</span></td>'
+        +'<td>'+body+'</td>'
         +'<td><button class="rm" data-rm="'+i+'" title="Remove"><svg class="icon"><use href="#ic-close"/></svg></button></td>'
         +'</tr>';
     });
     html+='</tbody></table>';
-    results.innerHTML=html; wire(); syncMatrix();
+    if(filtering && offMap.length) html+='<div class="none" style="margin-top:12px">'+offMap.length+' propert'+(offMap.length===1?'y':'ies')
+      +' couldn\u2019t be placed on the map and '+(offMap.length===1?'is':'are')+' only listed when every property is in view: '
+      +esc(offMap.map(function(r){ return r.property.address; }).join("; "))+'</div>';
+    if(!shown) html+='<div class="empty" style="min-height:140px"><svg class="icon"><use href="#ic-target"/></svg><p>'
+      +(typeFiltering() ? 'No properties of the chosen land types are in this part of the map. Change the land type filter, or zoom out.' : 'None of your '+rows.length+' properties are in this part of the map. Zoom out or pan to see them.')+'</p></div>';
+    results.innerHTML=html; wire(); if(!sidebarOnly) syncMatrix();
+  }
+  // Pill color follows the label it shows, so the same type is always the same color.
+  // (Order matters: "RP, Non-Qual Ag" is ag, not residential.)
+  function typeCls(label){
+    var t=String(label||"");
+    if(/condo/i.test(t)) return "condo";
+    if(/vacant/i.test(t)) return "vac";
+    if(/\b(ag|agricultural|non-?qual)\b|timber|forest|farm|ranch|grazing/i.test(t)) return "ag";
+    if(/commercial|industrial/i.test(t)) return "comm";
+    if(/mobile|manufactured/i.test(t)) return "mobile";
+    if(/improved|residential|dwelling/i.test(t)) return "res";
+    return "other";
   }
   function locBtn(g){ return '<button class="loc" data-loc="'+esc(g)+'" title="Show on map" aria-label="Show on map"><svg class="icon"><use href="#ic-target"/></svg></button>'; }
   function wire(){
@@ -722,32 +1055,46 @@
 
   $("searchForm").addEventListener("submit",function(e){
     e.preventDefault();
-    var g=$("geocode").value.trim();
-    if(!g) return;
-    if(looksLikeGeocode(g)) addProperty(g,true); else doAddressSearch(g);
-    $("geocode").value="";
+    var g=$("geocode").value.trim(), o=$("owner").value.replace(/\s+/g," ").trim();
+    if(!g && !o){ showToast("Enter a geocode, address or owner name"); return; }
+    if(o){
+      if(o.length<3){ showToast("Enter at least 3 characters of the owner name"); return; }
+      doOwnerSearch(o); $("owner").value="";
+    }
+    if(g){ if(looksLikeGeocode(g)) addProperty(g,true); else doAddressSearch(g); $("geocode").value=""; }
+  });
+  document.querySelectorAll(".tabs .tab[data-tab]").forEach(function(b){
+    b.addEventListener("click",function(){ setTab(b.dataset.tab); });
   });
   $("addrClose").addEventListener("click",closeAddr);
   $("addrModal").addEventListener("click",function(e){ if(e.target===this) closeAddr(); });
   document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !$("addrModal").hidden) closeAddr(); });
-  $("clearBtn").addEventListener("click",function(){ rows=[]; lastError=null; render(); restyle(); });
+  $("clearBtn").addEventListener("click",function(){ rows=[]; lastError=null; typeOff={}; render(); restyle(); });
   $("copyBtn").addEventListener("click",async function(){
     if(!rows.length){ showToast("Look up a property first"); return; }
+    if(activeTab!=="features"){
+      var txt=simpleAoa(activeTab,false).map(function(l){ return l.join("\t"); }).join("\n");
+      try{ await navigator.clipboard.writeText(txt); showToast("Copied "+mRows().length+" properties ("+activeTab+")"); }
+      catch(e){ showToast("Copy blocked by browser"); }
+      return;
+    }
     var lines=[["Address","City/State/Zip","Geocode","Type","Feature group","Feature","Area","Cost"].join("\t")];
-    rows.forEach(function(r){
+    mRows().forEach(function(r){
       var p=r.property;
       if(!r.features || r.features.length===0) lines.push([p.address,p.cityStateZip,p.geocode,p.propertyType,"","(none)","",""].join("\t"));
       else r.features.forEach(function(f){ lines.push([p.address,p.cityStateZip,p.geocode,p.propertyType,f.group,f.description,f.area!=null?(f.area+" "+(f.areaUnit||"")):(f.dims||""),f.cost==null?"":f.cost].join("\t")); });
     });
-    try{ await navigator.clipboard.writeText(lines.join("\n")); showToast("Copied "+rows.length+" properties"); }
+    try{ await navigator.clipboard.writeText(lines.join("\n")); showToast("Copied "+mRows().length+" properties"); }
     catch(e){ showToast("Copy blocked by browser"); }
   });
 
   // ---------- Area-select tools: box (drag) + polygon (click points) ----------
-  async function addMany(pids){
+  // opts.cap = most parcels to load at once (default 25); opts.fit = zoom the map to them afterwards.
+  async function addMany(pids,opts){
+    opts=opts||{};
     var fresh=pids.filter(function(p){ return p && !rows.some(function(r){return norm(r.property.geocode)===norm(p);}); });
-    if(!fresh.length){ showToast("Those parcels are already in the list"); return; }
-    var CAP=25;
+    if(!fresh.length){ showToast("Those parcels are already in the list"); if(opts.fit) fitToListed(pids); return; }
+    var CAP=opts.cap||25;
     if(fresh.length>CAP){ showToast("Selected "+fresh.length+" — loading the first "+CAP); fresh=fresh.slice(0,CAP); }
     var taxYear=$("taxyear").value, added=0, i=0;
     setHint("Loading "+fresh.length+" parcels…");
@@ -765,6 +1112,36 @@
     render(); restyle();
     showToast("Added "+added+" propert"+(added===1?"y":"ies"));
     setHint("Click, box, or draw a polygon to add parcels");
+    if(opts.fit){ await drawListed(); fitToListed(pids); }
+  }
+
+  // ---------- Owner search (primary owner, exact name, one county) ----------
+  (function(){
+    var sel=$("county"), saved=null;
+    sel.innerHTML=Object.keys(COUNTIES).sort(function(a,b){ return COUNTIES[a].localeCompare(COUNTIES[b]); })
+      .map(function(k){ return '<option value="'+k+'">'+esc(COUNTIES[k])+' ('+k+')</option>'; }).join("");
+    try{ saved=localStorage.getItem("mtmatrix.county"); }catch(e){}
+    sel.value=COUNTIES[saved] ? saved : "03";
+    sel.addEventListener("change",function(){ try{ localStorage.setItem("mtmatrix.county",sel.value); }catch(e){} });
+  })();
+  var OWNER_CAP=50;
+  async function doOwnerSearch(name){
+    var cid=$("county").value, cname=COUNTIES[cid]||cid;
+    setLoading(true); lastError=null;
+    try{
+      var res=await fetch("/api/owner-search?name="+encodeURIComponent(name)+"&countyId="+encodeURIComponent(cid)+"&taxYear="+encodeURIComponent($("taxyear").value));
+      var data=await res.json();
+      if(!res.ok){ lastError=data.error||("Owner search failed ("+res.status+")"); render(); return; }
+      var m=data.matches||[];
+      if(!m.length){
+        lastError='No parcels in '+cname+' County with primary owner “'+name.toUpperCase()+'”. The name has to match the record exactly (capitalization and commas don’t matter), usually last name first, e.g. KRAUS, RICINDA L.';
+        render(); return;
+      }
+      if(m.length>OWNER_CAP) showToast(m.length+" parcels match — loading the first "+OWNER_CAP);
+      else showToast(m.length+" parcel"+(m.length===1?"":"s")+" owned by "+m[0].owner);
+      await addMany(m.map(function(x){ return x.geocode; }),{cap:OWNER_CAP,fit:true});
+    }catch(e){ lastError="Couldn't reach the MTMatrix server. Is it running?"; render(); }
+    finally{ setLoading(false); }
   }
 
   // Ray-casting point-in-polygon (lng=x, lat=y). ring = array of L.latLng.
@@ -880,7 +1257,7 @@
   var GCLS={"Dwelling Additions":"g-add","Buildings & Improvements":"g-bld","Commercial Buildings":"g-com","Ag / Forest Land":"g-ag"};
   function matrixCols(){
     var cols=[], seen={};
-    rows.forEach(function(r){ (r.features||[]).forEach(function(f){
+    mRows().forEach(function(r){ (r.features||[]).forEach(function(f){
       var k=f.group+"|"+f.description;
       if(!seen[k]){ seen[k]={group:f.group,desc:f.description,cls:GCLS[f.group]||"g-add"}; cols.push(seen[k]); }
     }); });
@@ -937,7 +1314,7 @@
   // so a newly published year appears on its own. NOT part of change detection (values always differ).
   function apprYears(){
     var ys={};
-    rows.forEach(function(r){ (r.appraisals||[]).forEach(function(a){ if(a.year) ys[a.year]=true; }); });
+    mRows().forEach(function(r){ (r.appraisals||[]).forEach(function(a){ if(a.year) ys[a.year]=true; }); });
     return Object.keys(ys).map(Number).sort(function(a,b){ return a-b; });
   }
   function apprKey(y){ return "_av"+y; }
@@ -952,10 +1329,113 @@
     return '<small class="av" title="Total appraised value by tax year">'
       +a.map(function(x){ return '<span>'+esc(x.year)+' '+esc(money(x.total))+'</span>'; }).join("")+'</small>';
   }
+  // ---------- Land / Owner tables: a plain column list ----------
+  // Each column: {key, label, group, gcls, num, lines(r) -> display lines, exp(r) -> export value}.
+  // Hidden columns share the same remembered set as the Feature Matrix (keys don't collide).
+  function linesExp(c){
+    return function(r,nullEmpty){ var l=c.lines(r); return l.length ? l.join("; ") : (nullEmpty?null:""); };
+  }
+  function simpleCols(mode){
+    var cols=[];
+    function add(c){ if(!c.exp) c.exp=linesExp(c); cols.push(c); }
+    add({key:"_geocode",label:"Geocode",group:"Property",geo:true,lines:function(r){ return [r.property.geocode]; }});
+    if(mode==="land") add({key:"_ltype",label:"Land type",group:"Property",lines:function(r){ var t=r.property.landType; return t?[t]:[]; }});
+    else add({key:"_type",label:"Type",group:"Property",lines:function(r){ return [r.property.propertyType]; }});
+    apprYears().forEach(function(y){
+      add({key:apprKey(y),label:y+" Value",group:"Appraisal",num:true,
+        lines:function(r){ var v=apprVal(r,y); return v==null?[]:[money(v)]; },
+        exp:function(r,nullEmpty){ var v=apprVal(r,y); return v==null?(nullEmpty?null:""):v; }});
+    });
+    if(mode==="land"){
+      add({key:"_mlMethod",label:"Method",group:"Market Land",gcls:"g-ml",lines:function(r){ return mlItems(r).map(function(m){ return m.method||"—"; }); }});
+      add({key:"_mlType",label:"Type",group:"Market Land",gcls:"g-ml",lines:function(r){ return mlItems(r).map(function(m){ return m.type||"—"; }); }});
+      // Size goes in ONE of two numeric columns, picked by the item's method, so each column holds one kind of number
+      // (and can be totaled in Excel). One line per Market Land item, lined up with Method/Type; exports give the total.
+      function sizeCol(key,label,fn,fmt){
+        add({key:key,label:label,group:"Market Land",gcls:"g-ml",num:true,
+          lines:function(r){ var v=mlItems(r).map(fn); return v.some(function(x){ return x!=null; }) ? v.map(function(x){ return x==null?"":fmt(x); }) : []; },
+          exp:function(r,nullEmpty){ var v=mlItems(r).map(fn).filter(function(x){ return x!=null; });
+            return v.length ? Math.round(v.reduce(function(a,b){ return a+b; },0)*1000)/1000 : (nullEmpty?null:""); }});
+      }
+      sizeCol("_mlSqft","Sq ft",mlSqft,function(x){ return x.toLocaleString("en-US"); });
+      sizeCol("_mlAcres","Acres",mlAcres,function(x){ return x.toLocaleString("en-US",{maximumFractionDigits:3}); });
+      // One column per acre type found across the listed parcels.
+      var types=[], seen={};
+      mRows().forEach(function(r){ agGroups(r).forEach(function(g){ if(!seen[g.type]){ seen[g.type]=1; types.push(g.type); } }); });
+      types.sort().forEach(function(t){
+        function grp(r){ return agGroups(r).filter(function(g){ return g.type===t; })[0]; }
+        add({key:"ag|"+t,label:t,expLabel:t+" (acres)",group:"Ag / Forest Land",gcls:"g-ag",num:true,
+          lines:function(r){ var g=grp(r); return g?[acresTxt(g.acres)]:[]; },
+          exp:function(r,nullEmpty){ var g=grp(r); return g?g.acres:(nullEmpty?null:""); }});
+      });
+      if(types.length) add({key:"_agTotal",label:"Total ag acres",expLabel:"Total ag acres",group:"Ag / Forest Land",gcls:"g-ag",num:true,
+        lines:function(r){ var t=agTotal(r); return t==null?[]:[acresTxt(t)]; },
+        exp:function(r,nullEmpty){ var t=agTotal(r); return t==null?(nullEmpty?null:""):t; }});
+    }else if(mode==="owner"){
+      function others(r){ var p=primaryOwner(r); return ownersOf(r).filter(function(o){ return o!==p; }); }
+      add({key:"_oPrimary",label:"Primary owner",group:"Owner",gcls:"g-own",lines:function(r){ var p=primaryOwner(r); return p?[p.name]:[]; }});
+      add({key:"_oOthers",label:"Other owners",group:"Owner",gcls:"g-own",lines:function(r){ return others(r).map(function(o){ return o.name; }); }});
+      add({key:"_oPct",label:"Ownership %",group:"Owner",gcls:"g-own",num:true,
+        lines:function(r){ var p=primaryOwner(r); return p&&p.pct!=null?[p.pct+"%"]:[]; },
+        exp:function(r,nullEmpty){ var p=primaryOwner(r); return p&&p.pct!=null?p.pct:(nullEmpty?null:""); }});
+      add({key:"_oInt",label:"Interest type",group:"Owner",gcls:"g-own",lines:function(r){ var p=primaryOwner(r); return p&&p.interest?[p.interest]:[]; }});
+      add({key:"_oMail",label:"Mailing address",group:"Owner",gcls:"g-own",lines:function(r){ var p=primaryOwner(r); return p&&p.mailing?[p.mailing]:[]; }});
+      add({key:"_oCsz",label:"Mailing city/state/zip",group:"Owner",gcls:"g-own",lines:function(r){ var p=primaryOwner(r); return p&&p.cityStateZip?[p.cityStateZip]:[]; }});
+    }
+    return cols;
+  }
+  function simpleVis(){ return simpleCols(tableMode).filter(function(c){ return !hiddenCols[c.key]; }); }
+  function simpleMatrixHtml(){
+    var cols=simpleVis();
+    var h='<table class="mtable"><thead><tr><th class="lft stickyleft">Address</th>';
+    cols.forEach(function(c){
+      h+='<th class="'+(c.num?'':'lft ')+'hideable" title="'+esc(c.group)+'">'+(c.gcls?'<span class="gdot '+c.gcls+'"></span>':'')+esc(c.label)+xBtn(c.key)+'</th>';
+    });
+    h+='</tr></thead><tbody>';
+    mRows().forEach(function(r){
+      var g=norm(r.property.geocode), trc=((marked[g]?"rowsel ":"")+(focusG===g?"rowfocus":"")).trim();
+      h+='<tr data-g="'+esc(g)+'"'+(trc?' class="'+trc+'"':'')+'><td class="addr lft">'+locBtn(g)+esc(r.property.address)+'</td>';
+      cols.forEach(function(c){
+        h+='<td class="'+(c.num?'num':'lft')+(c.geo?' geo':'')+'">'+c.lines(r).map(esc).join("<br>")+'</td>';
+      });
+      h+='</tr>';
+    });
+    return h+'</tbody></table>';
+  }
+  function simplePickerHtml(){
+    var all=simpleCols(tableMode), shown=1, groups=[], by={};
+    all.forEach(function(c){ if(!by[c.group]){ by[c.group]={name:c.group,gcls:c.gcls,cols:[]}; groups.push(by[c.group]); } by[c.group].cols.push(c); });
+    function cb(c){
+      var on=!hiddenCols[c.key]; if(on) shown++;
+      return '<label class="mp-item"><input type="checkbox" data-col="'+esc(c.key)+'"'+(on?' checked':'')+'><span>'+esc(c.label)+'</span></label>';
+    }
+    var body=groups.map(function(g){
+      var head='<div class="mp-gh">'+(g.gcls?'<span class="gdot '+g.gcls+'"></span>':'')+esc(g.name)
+        +(g.cols.length>2?'<span class="mp-ga"><button data-colgroup="'+esc(g.name)+'" data-on="1" title="Show every column in this group">All</button>'
+          +'<button data-colgroup="'+esc(g.name)+'" data-on="0" title="Hide every column in this group">None</button></span>':'')+'</div>';
+      var extra=g.name==="Property"?'<label class="mp-item mp-fixed"><input type="checkbox" checked disabled><span>Address (always shown)</span></label>':'';
+      return '<div class="mp-group">'+head+extra+g.cols.map(cb).join("")+'</div>';
+    }).join("");
+    return '<div class="mp-head"><strong>Show columns</strong><span class="mp-n">'+shown+' of '+(all.length+1)+' shown</span>'
+      +'<div class="ph-spacer"></div><button class="btn" data-colall="1">Show all</button><button class="btn" data-act="cols">Done</button></div>'
+      +'<div class="mp-groups">'+body+'</div>';
+  }
+  // Export grid for the Land/Owner tables (also used by the sidebar Copy button on those tabs).
+  function simpleAoa(mode,nullEmpty){
+    var cols=simpleCols(mode).filter(function(c){ return !hiddenCols[c.key]; });
+    var head=["Address","City/State/Zip"].concat(cols.map(function(c){ return c.expLabel||c.label; }));
+    var aoa=[head];
+    aoa.fixed=2+cols.filter(function(c){ return c.group==="Property"; }).length;
+    mRows().forEach(function(r){
+      aoa.push([r.property.address, r.property.cityStateZip].concat(cols.map(function(c){ return c.exp(r,nullEmpty); })));
+    });
+    return aoa;
+  }
   function colKey(c){ return c.group+"|"+c.desc; }
   function visCols(){ return matrixCols().filter(function(c){ return !hiddenCols[colKey(c)]; }); }
   function xBtn(k){ return '<button class="th-x" data-hide="'+esc(k)+'" title="Hide this column">\u00d7</button>'; }
   function hiddenCount(){
+    if(tableMode!=="features") return simpleCols(tableMode).filter(function(c){ return hiddenCols[c.key]; }).length;
     var n=(hiddenCols._geocode?1:0)+(hiddenCols._type?1:0);
     DEP_COLS.forEach(function(d){ if(hiddenCols[d[0]]) n++; });
     apprYears().forEach(function(y){ if(hiddenCols[apprKey(y)]) n++; });
@@ -963,6 +1443,7 @@
     return n;
   }
   function pickerHtml(){
+    if(tableMode!=="features") return simplePickerHtml();
     var all=matrixCols(), yrs=apprYears(), shown=0, total=all.length+3+DEP_COLS.length+yrs.length;
     function cb(k,label){
       var on=!hiddenCols[k]; if(on) shown++;
@@ -994,6 +1475,9 @@
   }
   // Paint the table, picker and Columns button into a document (this page's floating panel, or the pop-out window).
   function paint(doc){
+    var tt=doc.getElementById("mtTitle"), nv=mRows().length;
+    if(tt) tt.textContent=TABS[tableMode]+(doc===document && nv<rows.length ? " \u00b7 "+nv+" of "+rows.length : "");
+    if(doc!==document) doc.title="MTMatrix — "+TABS[tableMode];
     doc.getElementById("mtBody").innerHTML=matrixHtml();
     var p=doc.getElementById("mtPicker");
     if(p){ p.hidden=!pickerOpen; p.innerHTML=pickerOpen?pickerHtml():""; }
@@ -1004,7 +1488,7 @@
       var ks=Object.keys(lastDiff), allOn=ks.length && ks.every(function(k){ return diffOn[k]; });
       db.innerHTML=diffBtnHtml(); db.classList.toggle("on",!!allOn);
       db.disabled=!ks.length;
-      db.title=ks.length ? "Highlight every property that doesn't match the rest" : (rows.length<3 ? "Change detection needs 3 or more properties" : "No differences found in the visible columns");
+      db.title=tableMode!=="features" ? "Change detection is on the Feature Matrix for now" : ks.length ? "Highlight every property that doesn't match the rest" : (mRows().length<3 ? "Change detection needs 3 or more properties" : "No differences found in the visible columns");
     }
   }
   // ---------- Change detection: flag the properties that don't match the rest ----------
@@ -1028,7 +1512,7 @@
   }
   // One entry per checkable column: {key, flags:{rowIndex:"missing"|"extra"|"value"}, n, tip}
   function diffColumns(cols,deps){
-    var out={}, n=rows.length;
+    var out={}, n=mRows().length;
     if(n<3) return out;
     function judge(key,vals,shows){
       var present=vals.filter(function(v){ return v!==""; }).length;
@@ -1051,11 +1535,11 @@
       if(c) out[key]={flags:flags, n:c, tip:tip+" · "+c+" differ"};
     }
     deps.forEach(function(d){
-      var vals=rows.map(function(r){ return String(depVal(r,d[2])).trim(); });
+      var vals=mRows().map(function(r){ return String(depVal(r,d[2])).trim(); });
       judge(d[0], vals, vals);
     });
     cols.forEach(function(c){
-      var cells=rows.map(function(r){ return cellFor(r,c); });
+      var cells=mRows().map(function(r){ return cellFor(r,c); });
       judge(colKey(c), cells.map(featKey), cells.map(function(v){ return cellExport(v,false); }));
     });
     return out;
@@ -1072,7 +1556,9 @@
     return '<svg class="icon"><use href="#ic-diff"/></svg> '+(on?'Hide differences':'Check all')+(keys.length?' <span class="dbadge">'+keys.length+'</span>':'');
   }
   function matrixHtml(){
-    if(!rows.length) return '<div class="modal-empty">No properties yet. Click parcels on the map or search to add them; this table updates as you go.</div>';
+    if(rows.length && !mRows().length) return '<div class="modal-empty">None of your '+rows.length+' properties are in this part of the map. Zoom out or pan to see them.</div>';
+    if(!mRows().length) return '<div class="modal-empty">No properties yet. Click parcels on the map or search to add them; this table updates as you go.</div>';
+    if(tableMode!=="features"){ lastDiff={}; return simpleMatrixHtml(); }
     var cols=visCols(), showGeo=!hiddenCols._geocode, showType=!hiddenCols._type, deps=depShown(), avs=apprShown();
     var diff=lastDiff=diffColumns(cols,deps);
     function th(cls,key,title,label){
@@ -1092,7 +1578,7 @@
     avs.forEach(function(y){ h+='<th class="hideable" title="Total appraised value, tax year '+esc(y)+'">'+esc(y)+' Value'+xBtn(apprKey(y))+'</th>'; });
     cols.forEach(function(c){ h+=th("",colKey(c),c.group,'<span class="gdot '+c.cls+'"></span>'+esc(c.desc)); });
     h+='</tr></thead><tbody>';
-    rows.forEach(function(r,i){
+    mRows().forEach(function(r,i){
       var g=norm(r.property.geocode);
       var trc=(marked[g]?"rowsel ":"")+(focusG===g?"rowfocus":"");
       // Row count: how many switched-on columns flag this property.
@@ -1100,7 +1586,7 @@
       h+='<tr data-g="'+esc(g)+'"'+(trc.trim()?' class="'+trc.trim()+'"':'')+'><td class="addr lft">'+locBtn(g)+esc(r.property.address)
         +(nd?'<span class="dcount" title="'+nd+' column'+(nd===1?'':'s')+' differ from most properties">'+nd+'</span>':'')+'</td>';
       if(showGeo) h+='<td class="lft geo">'+esc(r.property.geocode)+'</td>';
-      if(showType) h+='<td class="lft"><span class="chip '+(r.property.cls||"res")+'">'+esc(r.property.propertyType)+'</span></td>';
+      if(showType) h+='<td class="lft"><span class="chip '+typeCls(r.property.propertyType)+'">'+esc(r.property.propertyType)+'</span></td>';
       deps.forEach(function(d){ h+=td("lft",d[0],i,esc(depVal(r,d[2]))); });
       avs.forEach(function(y){ var v=apprVal(r,y); h+='<td class="num">'+(v==null?"":esc(money(v)))+'</td>'; });
       cols.forEach(function(c){ h+=td("num",colKey(c),i,cellDisp(cellFor(r,c))); });
@@ -1109,8 +1595,10 @@
     h+='</tbody></table>';
     return h;
   }
-  function openTable(){
+  // keepMode: re-open with the same table (Dock); otherwise lock it to the tab showing now.
+  function openTable(keepMode){
     if(!rows.length){ showToast("Look up some properties first"); return; }
+    if(!keepMode || keepMode.type) tableMode=activeTab;
     $("tableModal").hidden=false;
     paint(document);
     if(window.__mtPositionPanel) window.__mtPositionPanel();
@@ -1150,6 +1638,7 @@
 
   // ---------- Exports (shared by the in-page table and the pop-out window; tw = the window the click came from) ----------
   function matrixAoa(nullEmpty){
+    if(tableMode!=="features") return simpleAoa(tableMode,nullEmpty);
     var cols=visCols(), showGeo=!hiddenCols._geocode, showType=!hiddenCols._type;
     var head=["Address","City/State/Zip"];
     if(showGeo) head.push("Geocode");
@@ -1160,7 +1649,7 @@
     avs.forEach(function(y){ head.push(y+" Value"); });
     var aoa=[head.concat(cols.map(function(c){return c.desc;}))];
     aoa.fixed=head.length;
-    rows.forEach(function(r){
+    mRows().forEach(function(r){
       var line=[r.property.address, r.property.cityStateZip];
       if(showGeo) line.push(r.property.geocode);
       if(showType) line.push(r.property.propertyType);
@@ -1189,12 +1678,13 @@
     doc.body.appendChild(a); a.click(); doc.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(url); },1500);
   }
+  function fileBase(){ return "mtmatrix-"+TABS[tableMode].toLowerCase().replace(/\s+/g,"-")+"-"; }
   function csvEsc(v){
     var s=(v==null?"":String(v));
     return /[",\r\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
   }
   function exportCopy(tw){
-    if(!rows.length){ notify(tw,"Look up some properties first"); return; }
+    if(!mRows().length){ notify(tw,"Look up some properties first"); return; }
     var text=matrixAoa(false).map(function(l){ return l.join("\t"); }).join("\n");
     try{
       tw.navigator.clipboard.writeText(text).then(
@@ -1203,13 +1693,13 @@
     }catch(e){ notify(tw,"Copy blocked by browser"); }
   }
   function exportCsv(tw){
-    if(!rows.length){ notify(tw,"Look up some properties first"); return; }
+    if(!mRows().length){ notify(tw,"Look up some properties first"); return; }
     var text=matrixAoa(false).map(function(l){ return l.map(csvEsc).join(","); }).join("\r\n");
-    downloadBlob(tw, new Blob(["﻿"+text],{type:"text/csv;charset=utf-8;"}), "mtmatrix-feature-matrix-"+stamp()+".csv");
-    notify(tw,"Downloaded "+rows.length+" properties as CSV");
+    downloadBlob(tw, new Blob(["﻿"+text],{type:"text/csv;charset=utf-8;"}), fileBase()+stamp()+".csv");
+    notify(tw,"Downloaded "+mRows().length+" properties as CSV");
   }
   function exportXlsx(tw){
-    if(!rows.length){ notify(tw,"Look up some properties first"); return; }
+    if(!mRows().length){ notify(tw,"Look up some properties first"); return; }
     if(typeof XLSX==="undefined"){ notify(tw,"Excel export unavailable (library didn't load)"); return; }
     var aoa=matrixAoa(true), header=aoa[0];
     var ws=XLSX.utils.aoa_to_sheet(aoa);
@@ -1219,10 +1709,11 @@
       var addr=XLSX.utils.encode_cell({r:i,c:gi}), cell=ws[addr];
       if(cell && cell.v!=null){ cell.t="s"; cell.v=String(cell.v); }
     }
-    // Appraisal value columns stay numbers, shown as currency.
+    // Number columns stay numbers: values as currency, square feet and acres with separators.
     header.forEach(function(h,ci){
-      if(!/^\d{4} Value$/.test(h)) return;
-      for(var ri=1;ri<aoa.length;ri++){ var c=ws[XLSX.utils.encode_cell({r:ri,c:ci})]; if(c && c.t==="n") c.z="$#,##0"; }
+      var z=/^\d{4} Value$/.test(h) ? "$#,##0" : h==="Sq ft" ? "#,##0" : /acres$/i.test(h) ? "#,##0.###" : null;
+      if(!z) return;
+      for(var ri=1;ri<aoa.length;ri++){ var c=ws[XLSX.utils.encode_cell({r:ri,c:ci})]; if(c && c.t==="n") c.z=z; }
     });
     ws["!cols"]=header.map(function(h,idx){
       var maxLen=h.length;
@@ -1231,10 +1722,10 @@
       return {wch:Math.min(cap, Math.max(12, maxLen+2))};
     });
     var wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Feature Matrix");
+    XLSX.utils.book_append_sheet(wb, ws, TABS[tableMode]);
     var out=XLSX.write(wb,{bookType:"xlsx",type:"array"});
-    downloadBlob(tw, new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}), "mtmatrix-feature-matrix-"+stamp()+".xlsx");
-    notify(tw,"Downloaded "+rows.length+" properties as Excel");
+    downloadBlob(tw, new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}), fileBase()+stamp()+".xlsx");
+    notify(tw,"Downloaded "+mRows().length+" properties as Excel");
   }
 
   // ---------- Pop-out table window ----------
@@ -1245,7 +1736,7 @@
     if(!popAlive()) return;
     var d=popWin.document;
     paint(d);
-    d.getElementById("mtCount").textContent=rows.length ? rows.length+(rows.length===1?" property":" properties") : "";
+    var nv=mRows().length; d.getElementById("mtCount").textContent=rows.length ? (nv<rows.length ? nv+" of "+rows.length : nv)+(rows.length===1?" property":" properties") : "";
   }
   // Called after every render(): keeps the floating table and the pop-out window live.
   function syncMatrix(){
@@ -1274,7 +1765,8 @@
     if((el=t.closest("[data-colall]"))){ hiddenCols={}; saveHidden(); syncMatrix(); return; }
     if((el=t.closest("[data-colgroup]"))){
       var on=el.dataset.on==="1", grp=el.dataset.colgroup;
-      matrixCols().forEach(function(c){ if(c.group===grp){ if(on) delete hiddenCols[colKey(c)]; else hiddenCols[colKey(c)]=true; } });
+      var gl=tableMode==="features" ? matrixCols().map(function(c){ return {key:colKey(c),group:c.group}; }) : simpleCols(tableMode);
+      gl.forEach(function(c){ if(c.group===grp){ if(on) delete hiddenCols[c.key]; else hiddenCols[c.key]=true; } });
       saveHidden(); syncMatrix(); return;
     }
     var tr=t.closest("#mtBody tbody tr");
@@ -1329,9 +1821,9 @@
     var sprite=document.getElementById("ic-map").closest("svg").outerHTML;
     return '<!doctype html><html lang="en"><head><meta charset="utf-8">'
       +'<meta name="viewport" content="width=device-width,initial-scale=1">'
-      +'<title>MTMatrix — Feature Matrix</title><style>'+css+'\n'+POP_CSS+'</style></head><body class="pop">'+sprite
+      +'<title>MTMatrix — '+esc(TABS[tableMode])+'</title><style>'+css+'\n'+POP_CSS+'</style></head><body class="pop">'+sprite
       +'<div class="pop-app"><div class="modal-head">'
-      +'<h2><svg class="icon"><use href="#ic-grid"/></svg> Feature Matrix <span class="pop-count" id="mtCount"></span></h2>'
+      +'<h2><svg class="icon"><use href="#ic-grid"/></svg> <span id="mtTitle">'+esc(TABS[tableMode])+'</span> <span class="pop-count" id="mtCount"></span></h2>'
       +'<div class="ph-spacer"></div>'
       +'<button class="btn" id="mtCopy"><svg class="icon"><use href="#ic-copy"/></svg> Copy</button>'
       +'<button class="btn" id="mtCsv"><svg class="icon"><use href="#ic-download"/></svg> CSV</button>'
@@ -1347,6 +1839,8 @@
       +'</body></html>';
   }
   function popOut(){
+    // Pop out from the floating table keeps that table; otherwise lock to the tab showing now.
+    if($("tableModal").hidden) tableMode=activeTab;
     var g={}; try{ g=JSON.parse(localStorage.getItem("mtmatrix.popGeom")||"{}")||{}; }catch(e){}
     var w0=g.w||Math.min(1000,screen.availWidth-40), h0=g.h||Math.min(760,screen.availHeight-80);
     var feat="popup=yes,width="+w0+",height="+h0+(g.x!=null?",left="+g.x+",top="+g.y:"");
@@ -1370,7 +1864,7 @@
     attach:function(w){ popWin=w; pushPop(); },
     copy:exportCopy, csv:exportCsv, xlsx:exportXlsx,
     act:matrixAct, change:matrixChange,
-    dock:function(){ popWin=null; if(rows.length) openTable(); }
+    dock:function(){ popWin=null; if(rows.length) openTable(true); }
   };
 
   $("tableBtn").addEventListener("click",function(){
@@ -1391,7 +1885,7 @@
   $("mtCsv").addEventListener("click",function(){ exportCsv(window); });
   $("mtXlsx").addEventListener("click",function(){ exportXlsx(window); });
 
-  render();
+  setTab(activeTab);
 })();
 </script>
 </body>

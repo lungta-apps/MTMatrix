@@ -21,6 +21,8 @@ Built for Montana DOR appraisers, not the general public.
 
 **Finding properties**
 - **Search by geocode or address.** One box does both. Geocodes work with or without hyphens. An address with one match loads right away; several matches open a picker.
+- **Search by primary owner.** Type an owner name, pick a county (one at a time), and every parcel whose *primary* owner matches loads into the list (up to 50) and is highlighted on the map. Matching is exact except for capitalization, commas/periods and extra spaces, so `kraus ricinda l` finds `KRAUS, RICINDA L`, but `KRAUS RICINDA` does not.
+- **Tabs: Features · Owner · Land.** Every tab shows the same listed parcels. Owner = all owners (primary marked), ownership %, interest type, mailing address. Land = category/subcategory (e.g. `RP, Residential Property`), Market Land (method, type, sq ft or acres) and Ag/Forest land (acres per acre type + total). On the Land tab, **land type chips** filter the list (click to hide/show a type, Shift-click to show only that type) and **Totals** sums the listed properties' land: Market Land square feet and acres (each item counted under its method), Ag/Forest acres per acre type, and an all-land acre total. The sidebar, tables, exports and totals all follow the map view and the land type filter (footer shows shown/total, e.g. `3/15`). The **Table** button opens the matrix for whichever tab is showing (Feature, Owner or Land Matrix) and stays on it until it's closed; exports follow that table.
 - **Parcel map.** Search flies the map to the parcel. At zoom 16+ parcel outlines load and can be clicked.
 - **Map selection tools.** Click a parcel to add it, right-click a listed parcel to remove it, or select an area with **Box** or **Polygon** (up to 25 parcels per area selection).
 - **Basemap picker.** OpenFreeMap Dark (vector, default, sharp to zoom 20), Esri Dark Gray, or Esri World Imagery. Your choice is remembered; `?basemap=ofm|esri|imagery` in the URL overrides it.
@@ -87,10 +89,11 @@ Leaflet 1.9.4 and SheetJS 0.18.5 (cdnjs); MapLibre GL 5.24.0 and @maplibre/mapli
 
 | Route | What it does | Source |
 |---|---|---|
-| `GET /api/slice?geocode=&taxYear=` | One property: summary, dwelling details + depreciation ratings, appraisal history (total value per year), and the unified feature list. `taxYear` is optional (defaults to the parcel's newest year). | cadastralapi |
+| `GET /api/slice?geocode=&taxYear=` | One property: summary, dwelling details + depreciation ratings, appraisal history (total value per year), the unified feature list, `land` (Market Land + Ag/Forest items, `/MarketLand` + `/v1/AgForest`) and `owners` (`/v1/Properties/Owner`). `taxYear` is optional (defaults to the parcel's newest year). | cadastralapi |
 | `GET /api/parcel?geocode=` | One parcel's shape as GeoJSON | ArcGIS |
 | `GET /api/parcels?bbox=w,s,e,n` | All parcel shapes in the map view (simplified) | ArcGIS |
 | `GET /api/address?q=` | Address → matching parcels (up to 25) | ArcGIS |
+| `GET /api/owner-search?name=&countyId=&taxYear=` | Parcels whose primary owner matches `name` exactly (ignoring case, commas/periods, extra spaces). `countyId` = 2-digit geocode county prefix (03 = Yellowstone). Filters Montana's loose `/v1/Properties/Search` results. | cadastralapi |
 
 `/api/slice` returns:
 
