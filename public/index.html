@@ -218,6 +218,42 @@
   .loc:hover{color:var(--amber-400);background:rgba(230,172,94,.12)}
   .loc:focus-visible{outline:none;box-shadow:0 0 0 2px var(--amber-400)}
   tr.rowfocus .loc{color:var(--amber-400)}
+  /* value labels + property card (values-on-map) */
+  .vlab-wrap{background:none;border:0}
+  .vlegend{background:rgba(6,10,20,.86);border:1px solid var(--line-hairline);border-radius:var(--radius-sm);padding:8px 10px;box-shadow:var(--shadow-panel);font:500 11px/1.2 var(--font-mono);color:var(--text-body);min-width:132px}
+  .vl-title{font:600 10px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+  .vl-row{display:flex;align-items:center;gap:7px;padding:2px 0;white-space:nowrap}
+  .vl-row i{width:14px;height:10px;border-radius:3px;flex:none}
+  .vl-none i{background:transparent;border:1px solid var(--ink-4)}
+  .vl-none,.vl-low{color:var(--text-muted)}
+  .vlab{position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap;cursor:pointer;
+    font:600 11px/1 var(--font-mono);letter-spacing:.01em;color:var(--cyan-100);padding:4px 7px;border-radius:var(--radius-pill);
+    background:rgba(6,10,20,.82);border:1px solid var(--line-node);box-shadow:0 2px 8px rgba(0,0,0,.45),var(--inner-top);transition:background .12s,box-shadow .12s}
+  .vlab:hover{background:rgba(18,30,52,.95);box-shadow:var(--glow-sm)}
+  .vlab.listed{color:#03060c;background:var(--cyan-300);border-color:var(--cyan-200)}
+  .vlab.focus{border-color:var(--amber-400);box-shadow:0 0 0 1px var(--amber-400),0 0 10px rgba(230,172,94,.7)}
+  .vcard .leaflet-popup-content-wrapper{background:var(--bg-panel);color:var(--text-body);border:1px solid var(--line-node);border-radius:var(--radius-md);box-shadow:var(--shadow-panel),var(--glow-sm)}
+  .vcard .leaflet-popup-tip{background:var(--bg-panel);border:1px solid var(--line-node)}
+  .vcard .leaflet-popup-content{margin:14px 14px 12px;font:13px/1.4 var(--font-core)}
+  .vcard a.leaflet-popup-close-button{color:var(--text-muted)}
+  .vc-addr{color:var(--text-primary);font-weight:700;font-size:14px;padding-right:14px}
+  .vc-geo{font:500 11px var(--font-mono);color:var(--cyan-200);margin-top:2px}
+  .vc-sec{font:500 10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin:12px 0 6px}
+  .vc-vals div{display:flex;justify-content:space-between;font:500 12.5px var(--font-mono);padding:4px 0;border-bottom:1px solid var(--line-hairline)}
+  .vc-vals div:first-child b{color:var(--cyan-200)}
+  .vc-vals b{color:var(--text-primary);font-weight:600}
+  .vc-none,.vc-svmsg{color:var(--text-muted);font-size:12px;display:flex;align-items:center;gap:8px}
+  .vc-sv{margin-top:12px;min-height:24px}
+  .vc-sv:has(.spinner){min-height:176px;align-items:flex-start}
+  .vc-svimg{display:block;position:relative;width:100%;padding:0;border:1px solid var(--line-hairline);border-radius:var(--radius-sm);overflow:hidden;cursor:pointer;background:var(--void-800)}
+  .vc-svimg img{display:block;width:100%;aspect-ratio:2/1;object-fit:cover}
+  .vc-svexp{position:absolute;right:8px;bottom:8px;display:inline-flex;align-items:center;gap:6px;font:600 11px var(--font-core);color:var(--cyan-100);background:rgba(3,6,12,.78);border:1px solid var(--line-node);padding:4px 9px;border-radius:var(--radius-pill)}
+  .vc-svexp .icon{width:13px;height:13px}
+  .vc-svdate{font:500 10.5px var(--font-mono);color:var(--text-muted);margin-top:5px}
+  .vc-act{margin-top:12px;display:flex;justify-content:flex-end}
+  .sv-panel{width:min(1100px,94vw);height:min(720px,86vh)}
+  #svPano{flex:1;min-height:0;background:var(--void-800)}
+  .g-logo img{display:block;height:18px;margin:0 2px 2px 0}
   .leaflet-overlay-pane path.mt-focus{filter:drop-shadow(0 0 5px rgba(230,172,94,.95))}
   /* Change detection (red = doesn't match the rest; separate from cyan bookmark and amber map highlight). */
   .mtable th .dwrap{margin:0 0 6px}
@@ -297,7 +333,9 @@
           <option value="ofm">OpenFreeMap Dark</option>
           <option value="esri">Esri Dark Gray</option>
           <option value="imagery">Esri Imagery</option>
+          <option value="google">Google Satellite</option>
         </select>
+        <button class="btn" id="vcolBtn" hidden title="Shade parcels by appraised value, low to high within the current view (zoom 18+)"><svg class="icon"><use href="#ic-diff"/></svg> Value colors</button>
         <button class="btn" id="boxBtn"><svg class="icon"><use href="#ic-box"/></svg> Box</button>
         <button class="btn" id="polyBtn"><svg class="icon"><use href="#ic-poly"/></svg> Polygon</button>
       </div>
@@ -362,6 +400,17 @@
   </div>
 </div>
 
+<div class="modal" id="svModal" hidden>
+  <div class="modal-panel sv-panel">
+    <div class="modal-head">
+      <h2><svg class="icon"><use href="#ic-target"/></svg> <span id="svTitle">Street View</span></h2>
+      <div class="ph-spacer"></div>
+      <button class="btn" id="svClose"><svg class="icon"><use href="#ic-close"/></svg> Close</button>
+    </div>
+    <div id="svPano"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -392,7 +441,7 @@
   //            Default. Building outlines come from OpenStreetMap, so some can be missing.
   //  esri    — Esri dark-gray canvas raster (keyless). Native tiles stop at z16, so it blurs past that.
   //  imagery — Esri World Imagery aerials (keyless, ~z19 native) + Esri place/road labels.
-  // ?basemap=esri|imagery|ofm in the URL also picks one.
+  // ?basemap=esri|imagery|ofm|google in the URL also picks one.
   var ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
   var OFM_ATTR='<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
   function webglOk(){
@@ -401,7 +450,56 @@
   // The plugin's browser build exposes itself as window.MaplibreGLLeaflet (older builds used L.maplibreGL).
   var mlLayer=(window.MaplibreGLLeaflet && window.MaplibreGLLeaflet.maplibreGL) || L.maplibreGL;
   var vectorOk=!!(window.maplibregl && mlLayer && webglOk());
+  // The Google key comes from the server (/api/config <- GOOGLE_MAPS_API_KEY env var), never from the repo.
+  var gKey=null;
+  var configReady=fetch("/api/config").then(function(r){ return r.json(); }).then(function(c){ gKey=(c && c.googleMapsKey)||null; }).catch(function(){});
+  // google  — Google satellite + road labels via the Map Tiles API (needs the key; session-based tile URLs).
+  //            Google's logo and the copyright line for the current view must stay on the map.
+  var gLogo=L.control({position:"bottomright"});   // bottom-left is covered by the map hint
+  gLogo.onAdd=function(){ var d=L.DomUtil.create("div","g-logo"); d.innerHTML='<img alt="Google" src="https://maps.gstatic.com/mapfiles/api-3/images/google_white5.png">'; return d; };
+  var gSession=null, gAttr=null, gAttrSeq=0;
+  async function googleSession(){
+    if(gSession) return gSession;
+    var r=await fetch("https://tile.googleapis.com/v1/createSession?key="+encodeURIComponent(gKey),{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({mapType:"satellite",language:"en-US",region:"US",layerTypes:["layerRoadmap"]})});
+    var j=await r.json();
+    if(!r.ok || !j.session) throw new Error((j.error && j.error.message) || "session");
+    gSession=j.session; return gSession;
+  }
+  async function googleAttribution(){
+    if(baseKey!=="google" || !gSession) return;
+    var seq=++gAttrSeq, b=map.getBounds();
+    try{
+      var r=await fetch("https://tile.googleapis.com/tile/v1/viewport?session="+encodeURIComponent(gSession)+"&key="+encodeURIComponent(gKey)
+        +"&zoom="+Math.round(map.getZoom())+"&north="+b.getNorth()+"&south="+b.getSouth()+"&east="+b.getEast()+"&west="+b.getWest());
+      var j=await r.json();
+      if(seq!==gAttrSeq || baseKey!=="google") return;
+      var txt="Google"+(j.copyright?" · "+esc(j.copyright):"");
+      if(gAttr) map.attributionControl.removeAttribution(gAttr);
+      gAttr=txt; map.attributionControl.addAttribution(gAttr);
+    }catch(e){}
+  }
+  function googleOff(){
+    if(gAttr){ map.attributionControl.removeAttribution(gAttr); gAttr=null; }
+    gLogo.remove();
+  }
+  map.on("moveend",function(){ if(baseKey==="google") googleAttribution(); });
   var BASEMAPS={
+    google:function(){
+      var lyr=L.tileLayer("data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",{maxZoom:20,maxNativeZoom:20});   // blank until the session URL is ready
+      (async function(){
+        await configReady;
+        if(!gKey){ showToast("Google Satellite needs a Google Maps API key"); setBasemap("imagery"); return; }
+        try{
+          var sess=await googleSession();
+          if(baseKey!=="google") return;
+          lyr.setUrl("https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session="+encodeURIComponent(sess)+"&key="+encodeURIComponent(gKey));
+          gLogo.addTo(map); googleAttribution();
+        }catch(e){ showToast("Couldn't start Google Satellite ("+e.message+")"); setBasemap("imagery"); }
+      })();
+      return lyr;
+    },
     ofm:function(){
       // The plugin reads the Leaflet credit line from attributionControl.customAttribution.
       return mlLayer({ style:"https://tiles.openfreemap.org/styles/dark", attributionControl:{customAttribution:OFM_ATTR} });
@@ -428,9 +526,11 @@
     var next;
     try{ next=BASEMAPS[key](); }catch(e){ if(key!=="esri"){ setBasemap("esri"); } return; }
     if(baseLayer) map.removeLayer(baseLayer);
-    baseLayer=next.addTo(map); baseKey=key;
+    if(baseKey==="google") googleOff();
+    baseKey=key; baseLayer=next.addTo(map);
     var sel=$("basemapSel"); if(sel) sel.value=key;
     try{ localStorage.setItem("mtmatrix.basemap",key); }catch(e){}
+    onBasemapChange();
   }
   (function(){
     var sel=$("basemapSel");
@@ -445,7 +545,11 @@
 
   function selSet(){ var s={}; rows.forEach(function(r){ s[norm(r.property.geocode)]=true; }); return s; }
   function parcelStyle(feat){
-    var sel = selSet()[norm(feat.properties.PARCELID)];
+    var k=norm(feat.properties.PARCELID), sel = selSet()[k];
+    var vc = (typeof choroOn==="function" && choroOn()) ? valueColor(k) : null;
+    if(vc) return sel
+      ? {color:"#d5fbff",weight:2.5,opacity:1,fillColor:vc,fillOpacity:0.6}
+      : {color:"#03060c",weight:0.6,opacity:0.6,fillColor:vc,fillOpacity:0.55};
     return sel
       ? {color:"#6ae6f7",weight:2,opacity:1,fillColor:"#22c2e0",fillOpacity:0.25}
       : {color:"#3fd8f0",weight:0.8,opacity:0.35,fillColor:"#1e2942",fillOpacity:0.05};
@@ -473,12 +577,12 @@
       layer.on("mouseout",function(){ layer.setStyle(parcelStyle(feat)); });
     }
   }).addTo(map);
-  function restyle(){ parcelLayer.setStyle(parcelStyle); }
+  function restyle(){ parcelLayer.setStyle(parcelStyle); if(labelLayer) drawLabels(parcelsInView()); }
 
   var loadTimer=null;
   function scheduleLoad(){ clearTimeout(loadTimer); loadTimer=setTimeout(loadParcelsInView,350); }
   async function loadParcelsInView(){
-    if(map.getZoom() < MINZOOM){ parcelLayer.clearLayers(); setHint("Zoom in to load clickable parcels"); return; }
+    if(map.getZoom() < MINZOOM){ parcelLayer.clearLayers(); labelLayer.clearLayers(); paintChoro([]); setHint("Zoom "+map.getZoom()+" · zoom in to load parcels and values"); return; }
     var b=map.getBounds();
     var bbox=[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].join(",");
     setHint("Loading parcels…");
@@ -491,10 +595,297 @@
       restyle();
       focusLayer.eachLayer(function(l){ if(l.bringToFront) l.bringToFront(); });   // keep the amber highlight above freshly loaded parcels
       var n=(fc.features||[]).length;
-      setHint(n+" parcel"+(n===1?"":"s")+" in view"+(fc.exceededTransferLimit?" (zoom in for all)":"")+" · click to add or find in table · right-click to remove");
+      parcelHint=n+" parcel"+(n===1?"":"s")+(fc.exceededTransferLimit?" (zoom in for all)":"")+" · click to add · right-click to remove";
+      refreshLabels();
     }catch(e){ setHint("Could not load parcels"); }
   }
   map.on("moveend", scheduleLoad);
+
+  // ===================== Google key, value labels, property card, Street View =====================
+
+  // ---- Values on the map ----
+  //  values load from zoom 17 (VALUEZOOM) so they're ready when labels appear
+  //  zoom 18: short labels ($321K / $1.04M) · zoom 19+: full labels ($321,200)
+  //  Value colors (optional, dark basemaps only — not on imagery): zoom 18+, parcels shaded RELATIVE to what's on
+  //  screen (5 quantile classes + legend). Toggled with the "Value colors" button; remembered on this browser.
+  //  Labels de-clutter: a colliding label is nudged up/down inside its own parcel before it's hidden.
+  var LABELZOOM=18;
+  var VALUEZOOM=17;
+  var COLORZOOM=18;
+  var colorsOn=false;
+  try{ colorsOn=localStorage.getItem("mtmatrix.valueColors")==="1"; }catch(e){}
+  var LABEL_MAX=400;                // most labels drawn at once
+  var VALUE_FETCH_MAX=1000;         // most parcels whose values we fetch per view
+  var valCache={};                  // hyphen-less PARCELID -> [{year,total}] | null (lookup failed)
+  var valPending={};
+  var labelLayer=L.layerGroup().addTo(map);
+  var labelStats={shown:0,hidden:0}, valLoading=0, parcelHint="";
+  function latestVal(list){
+    if(!list || !list.length) return null;
+    for(var i=list.length-1;i>=0;i--){ if(typeof list[i].total==="number") return list[i]; }
+    return null;
+  }
+  // Short form: drop the last three digits ($321,200 -> $321K); a million and up keeps two decimals ($1,047,700 -> $1.04M).
+  function shortMoney(n){
+    if(n>=1e6) return "$"+(Math.floor(n/1e4)/100).toFixed(2)+"M";
+    return "$"+Math.floor(n/1000)+"K";
+  }
+  // Parcels drawn on the map right now that sit inside the view: {pid, k, pt, address, layer}
+  function parcelsInView(){
+    var b=map.getBounds(), out=[], seen={};
+    parcelLayer.eachLayer(function(l){
+      if(!l.feature) return;
+      var pid=l.feature.properties.PARCELID, k=norm(pid);
+      if(!pid || seen[k]) return;
+      var pt=parcelPoint(l);
+      if(!b.contains(pt)) return;
+      seen[k]=true;
+      out.push({pid:pid,k:k,pt:pt,address:l.feature.properties.address||null,layer:l});
+    });
+    var c=map.getCenter();
+    out.sort(function(a,b2){ return a.pt.distanceTo(c)-b2.pt.distanceTo(c); });   // nearest the center first
+    return out;
+  }
+  function updateHint(){
+    var z=map.getZoom(), s="Zoom "+z+" · "+parcelHint;
+    if(valLoading) s+=" · loading values…";
+    if(z<LABELZOOM) s+=" · zoom in for values";
+    else s+=" · "+labelStats.shown+" values"+(labelStats.hidden?" · "+labelStats.hidden+" hidden, zoom in":"")+" · click a value for details";
+    setHint(s);
+  }
+
+  // ---- Color by value (relative to the view) ----
+  var VCOLORS=["#5f2eb0","#4a9df8","#4ed9b0","#e6ac5e","#f06a6a"];   // 5 classes, low -> high (purple, blue, mint, amber, red)
+  var VLOW_COLOR="#55657d";         // very low outliers (e.g. a $2K sliver lot): gray, kept out of the color ranges
+  var vBreaks=null;                 // upper bound of each class (ascending); null = no coloring
+  // A function (not a lookup table) because the basemap is set at startup, before this block's variables exist.
+  function isDarkBase(){ return baseKey==="ofm" || baseKey==="esri"; }
+  function choroOn(){ return !!colorsOn && isDarkBase() && map.getZoom()>=COLORZOOM; }
+  // The Value colors button only exists on the dark basemaps; on imagery the photo is the point, so no shading.
+  function onBasemapChange(){
+    var b=$("vcolBtn"); if(!b) return;
+    b.hidden=!isDarkBase();
+    b.classList.toggle("on",!!colorsOn);
+    if(labelLayer) redrawValues(parcelsInView());
+  }
+  $("vcolBtn").addEventListener("click",function(){
+    colorsOn=!colorsOn;
+    try{ localStorage.setItem("mtmatrix.valueColors",colorsOn?"1":"0"); }catch(e){}
+    onBasemapChange();
+    if(colorsOn && map.getZoom()<COLORZOOM) showToast("Value colors show from zoom 18");
+  });
+  onBasemapChange();               // sync the button with the saved basemap + saved on/off
+  function valueColor(k){
+    if(!vBreaks) return null;
+    var v=latestVal(valCache[k]); if(!v) return null;
+    if(v.total<vBreaks.cutoff) return VLOW_COLOR;
+    for(var i=0;i<vBreaks.length;i++){ if(v.total<=vBreaks[i]) return VCOLORS[Math.round(i*(VCOLORS.length-1)/Math.max(1,vBreaks.length-1))]; }
+    return VCOLORS[VCOLORS.length-1];
+  }
+  // Quantile classes: each color holds about the same number of parcels, so a few $1M+ outliers can't wash out the rest.
+  function computeBreaks(list){
+    var vals=[];
+    list.forEach(function(p){ var v=latestVal(valCache[p.k]); if(v) vals.push(v.total); });
+    if(vals.length<3){ vBreaks=null; return; }
+    vals.sort(function(a,b){ return a-b; });
+    // Very low outliers (under 10% of the view's median, and at least under $10K) don't set the ranges.
+    // They're shaded gray instead, and their labels still show the real value.
+    var median=vals[Math.floor(vals.length/2)], cutoff=Math.max(10000, Math.round(median*0.1));
+    var lowCount=vals.filter(function(v){ return v<cutoff; }).length;
+    vals=vals.filter(function(v){ return v>=cutoff; });
+    if(vals.length<3){ vBreaks=null; return; }
+    var n=Math.min(VCOLORS.length, vals.length), br=[];
+    for(var i=1;i<=n;i++){
+      var b=vals[Math.min(vals.length-1, Math.ceil(i*vals.length/n)-1)];
+      if(!br.length || b>br[br.length-1]) br.push(b);
+    }
+    vBreaks=br; vBreaks.min=vals[0]; vBreaks.cutoff=cutoff; vBreaks.lowCount=lowCount;
+  }
+  var legend=L.control({position:"topright"});
+  legend.onAdd=function(){ var d=L.DomUtil.create("div","vlegend"); L.DomEvent.disableClickPropagation(d); return d; };
+  var legendOn=false;
+  function paintChoro(list){
+    if(!choroOn()){ vBreaks=null; if(legendOn){ legend.remove(); legendOn=false; } return; }
+    computeBreaks(list);
+    if(!vBreaks){ if(legendOn){ legend.remove(); legendOn=false; } return; }
+    if(!legendOn){ legend.addTo(map); legendOn=true; }
+    var lo=vBreaks.min, rows="";
+    vBreaks.forEach(function(hi,i){
+      var c=VCOLORS[Math.round(i*(VCOLORS.length-1)/Math.max(1,vBreaks.length-1))];
+      rows='<div class="vl-row"><i style="background:'+c+'"></i>'+esc(shortMoney(lo))+(hi>lo?' – '+esc(shortMoney(hi)):'')+'</div>'+rows;   // high on top
+      lo=hi+1;
+    });
+    legend.getContainer().innerHTML='<div class="vl-title">Value · this view</div>'+rows
+      +(vBreaks.lowCount?'<div class="vl-row vl-low" title="Very low values are left out of the color ranges so they don\'t stretch them"><i style="background:'+VLOW_COLOR+'"></i>Under '+esc(shortMoney(vBreaks.cutoff))+' (outlier)</div>':'')
+      +'<div class="vl-row vl-none"><i></i>No value</div>';
+  }
+
+  var labelSeq=0;
+  async function refreshLabels(){
+    var seq=++labelSeq;
+    var list=parcelsInView();
+    redrawValues(list);
+    if(map.getZoom()<VALUEZOOM) return;
+    var need=list.filter(function(p){ return !(p.k in valCache) && !valPending[p.k]; }).slice(0,VALUE_FETCH_MAX);
+    if(!need.length) return;
+    var chunks=[]; for(var i=0;i<need.length;i+=50) chunks.push(need.slice(i,i+50));
+    valLoading++; updateHint();
+    var next=0;
+    async function worker(){            // two batches in flight at once (the server runs a pool per batch)
+      while(next<chunks.length && seq===labelSeq){
+        var chunk=chunks[next++];
+        chunk.forEach(function(p){ valPending[p.k]=true; });
+        try{
+          var res=await fetch("/api/values?geocodes="+encodeURIComponent(chunk.map(function(p){ return p.pid; }).join(",")));
+          var data=await res.json();
+          chunk.forEach(function(p){
+            var v=data && data.values ? data.values[p.pid] : undefined;
+            if(v!==undefined) valCache[p.k]=v;
+          });
+        }catch(e){}
+        chunk.forEach(function(p){ delete valPending[p.k]; });
+        if(seq===labelSeq) redrawValues(parcelsInView());
+      }
+    }
+    await Promise.all([worker(),worker()]);
+    valLoading--; updateHint();
+  }
+  function redrawValues(list){
+    paintChoro(list);
+    parcelLayer.setStyle(parcelStyle);
+    drawLabels(list);
+    updateHint();
+  }
+  // Greedy de-clutter: listed properties first, then nearest the center. A label that collides is tried a bit higher
+  // or lower (staying inside its own parcel) before it's hidden.
+  var NUDGES=[0,-18,18,-36,36];
+  function drawLabels(list){
+    labelLayer.clearLayers(); labelStats={shown:0,hidden:0};
+    var z=map.getZoom();
+    if(z<LABELZOOM) return;
+    var full=z>=LABELZOOM+1, listed=selSet(), boxes=[], n=0;
+    list=list.slice().sort(function(a,b){ return (listed[b.k]?1:0)-(listed[a.k]?1:0); });
+    list.forEach(function(p){
+      var v=latestVal(valCache[p.k]);
+      if(!v) return;
+      if(n>=LABEL_MAX){ labelStats.hidden++; return; }
+      var txt=full?money(v.total):shortMoney(v.total), w=14+txt.length*6.8, h=20;
+      var xy=map.latLngToContainerPoint(p.pt), pb=null;
+      try{ var lb=p.layer.getBounds(); pb=[map.latLngToContainerPoint(lb.getNorthWest()).y, map.latLngToContainerPoint(lb.getSouthEast()).y]; }catch(e){}
+      var placed=null;
+      for(var j=0;j<NUDGES.length && !placed;j++){
+        var cy=xy.y+NUDGES[j];
+        if(j && pb && (cy-h/2<pb[0] || cy+h/2>pb[1])) continue;     // a nudge must stay inside the parcel
+        var box=[xy.x-w/2-2, cy-h/2-1, xy.x+w/2+2, cy+h/2+1];
+        if(!boxes.some(function(o){ return box[0]<o[2] && box[2]>o[0] && box[1]<o[3] && box[3]>o[1]; })) placed={box:box,y:cy};
+      }
+      if(!placed){ labelStats.hidden++; return; }
+      boxes.push(placed.box); n++;
+      var at=placed.y===xy.y ? p.pt : map.containerPointToLatLng([xy.x,placed.y]);
+      var on=listed[p.k], foc=(focusG===p.k);
+      var m=L.marker(at,{
+        icon:L.divIcon({className:"vlab-wrap",iconSize:[0,0],
+          html:'<span class="vlab'+(on?' listed':'')+(foc?' focus':'')+'" title="'+esc(v.year)+': '+esc(money(v.total))+' · click for details">'+esc(txt)+'</span>'}),
+        keyboard:false, riseOnHover:true, zIndexOffset:on?1000:0
+      });
+      m.on("click",function(){ openCard(p); });
+      m.addTo(labelLayer);
+    });
+    labelStats.shown=n;
+  }
+  map.on("zoomend",function(){ if(map.getZoom()<LABELZOOM) labelLayer.clearLayers(); });
+
+  // ---- Property card: all years' values, Street View preview, Add to list ----
+  var cardPopup=L.popup({className:"vcard",maxWidth:340,minWidth:300,autoPanPadding:[30,30],offset:[0,-8]});
+  var cardFor=null;
+  function cardHtml(p){
+    var vals=(valCache[p.k]||[]).filter(function(x){ return typeof x.total==="number"; }).slice().reverse();
+    var inList=isListed(p.pid);
+    return '<div class="vc">'
+      +'<div class="vc-addr">'+esc(p.address||"(no address on the parcel layer)")+'</div>'
+      +'<div class="vc-geo">'+esc(p.pid)+'</div>'
+      +'<div class="vc-sec">Appraised total value</div>'
+      +(vals.length ? '<div class="vc-vals">'+vals.map(function(x){ return '<div><span>'+esc(x.year)+'</span><b>'+esc(money(x.total))+'</b></div>'; }).join("")+'</div>'
+                    : '<div class="vc-none">No appraisal values on record.</div>')
+      +'<div class="vc-sv" data-sv="1"><div class="vc-svmsg"><span class="spinner"></span> Checking Street View…</div></div>'
+      +'<div class="vc-act">'+(inList
+          ? '<button class="btn" disabled>In your list</button>'
+          : '<button class="btn primary" data-addlist="1"><svg class="icon"><use href="#ic-plus"/></svg> Add to list</button>')+'</div>'
+      +'</div>';
+  }
+  function openCard(p){
+    cardFor=p;
+    // Content is a DOM node (not an HTML string) so cardPopup.update() re-fits it without wiping the Street View preview.
+    var el=document.createElement("div"); el.innerHTML=cardHtml(p);
+    cardPopup.setLatLng(p.pt).setContent(el).openOn(map);
+    L.DomEvent.disableClickPropagation(el);
+    var add=el.querySelector("[data-addlist]");
+    if(add) add.addEventListener("click",function(){
+      addProperty(p.pid,false);
+      add.disabled=true; add.textContent="Added";
+    });
+    loadStreetPreview(p, el.querySelector("[data-sv]"));
+  }
+
+  // ---- Street View (Google Maps JavaScript API, loaded the first time a card opens) ----
+  var gmapsReady=null;
+  function loadGmaps(){
+    if(gmapsReady) return gmapsReady;
+    gmapsReady=new Promise(function(resolve,reject){
+      if(window.google && google.maps && google.maps.StreetViewService){ resolve(); return; }
+      window.__mtGmapsCb=function(){ resolve(); };
+      var s=document.createElement("script");
+      s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(gKey)+"&v=weekly&loading=async&callback=__mtGmapsCb";
+      s.async=true; s.onerror=function(){ gmapsReady=null; reject(new Error("load")); };
+      document.head.appendChild(s);
+    });
+    return gmapsReady;
+  }
+  // Compass bearing (degrees) from a → b, so the camera faces the house.
+  function bearing(a,b){
+    var r=Math.PI/180, f1=a.lat*r, f2=b.lat*r, dl=(b.lng-a.lng)*r;
+    var y=Math.sin(dl)*Math.cos(f2), x=Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dl);
+    return (Math.atan2(y,x)/r+360)%360;
+  }
+  function svDate(d){
+    var m=/^(\d{4})-(\d{2})/.exec(String(d||""));
+    if(!m) return d||"";
+    return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m[2]-1]+" "+m[1];
+  }
+  async function loadStreetPreview(p,box){
+    if(!box) return;
+    function msg(t){ box.innerHTML='<div class="vc-svmsg">'+t+'</div>'; cardPopup.update(); }
+    await configReady;
+    if(!gKey){ msg("Street View needs a Google Maps API key (GOOGLE_MAPS_API_KEY)."); return; }
+    try{ await loadGmaps(); }catch(e){ msg("Couldn't load Google Maps. Check the API key and its restrictions."); return; }
+    if(cardFor!==p) return;
+    var sv=new google.maps.StreetViewService();
+    sv.getPanorama({location:{lat:p.pt.lat,lng:p.pt.lng},radius:80,source:google.maps.StreetViewSource.OUTDOOR,preference:google.maps.StreetViewPreference.NEAREST},function(data,status){
+      if(cardFor!==p) return;
+      if(status!=="OK" || !data || !data.location){ msg("No Street View near this parcel."); return; }
+      var at={lat:data.location.latLng.lat(),lng:data.location.latLng.lng()};
+      var pano=data.location.pano, heading=Math.round(bearing(at,{lat:p.pt.lat,lng:p.pt.lng}));
+      var img="https://maps.googleapis.com/maps/api/streetview?size=600x300&scale=2&fov=75&pitch=4"
+        +"&pano="+encodeURIComponent(pano)+"&heading="+heading+"&key="+encodeURIComponent(gKey);
+      box.innerHTML='<button class="vc-svimg" title="Open interactive Street View"><img alt="Street View of this property" src="'+esc(img)+'">'
+        +'<span class="vc-svexp"><svg class="icon"><use href="#ic-popout"/></svg> Open Street View</span></button>'
+        +'<div class="vc-svdate">Street View · '+esc(svDate(data.imageDate))+'</div>';
+      box.querySelector(".vc-svimg").addEventListener("click",function(){ openStreetView(p,pano,heading,data.imageDate); });
+      cardPopup.update();                                   // re-fit + pan so the taller card stays on screen
+    });
+  }
+  var svPano=null;
+  function openStreetView(p,pano,heading,date){
+    $("svTitle").textContent=(p.address||p.pid)+(date?" · "+svDate(date):"");
+    $("svModal").hidden=false;
+    var opts={pano:pano,pov:{heading:heading,pitch:4},zoom:0,addressControl:false,motionTracking:false,motionTrackingControl:false,fullscreenControl:true};
+    if(!svPano) svPano=new google.maps.StreetViewPanorama($("svPano"),opts);
+    else { svPano.setPano(pano); svPano.setPov(opts.pov); svPano.setZoom(0); }
+  }
+  function closeStreetView(){ $("svModal").hidden=true; }
+  $("svClose").addEventListener("click",closeStreetView);
+  $("svModal").addEventListener("click",function(e){ if(e.target===this) closeStreetView(); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !$("svModal").hidden) closeStreetView(); });
 
   // Parcel shapes by hyphen-less geocode, so locating the same parcel twice doesn't refetch.
   var shapeCache={};
@@ -544,6 +935,7 @@
   function markFocusEverywhere(from){
     markFocusRows(document,from);
     if(popAlive()) markFocusRows(popWin.document,from);
+    if(labelLayer) drawLabels(parcelsInView());        // amber ring on the focused property's value label
   }
   async function setFocus(geocode,opts){
     opts=opts||{};

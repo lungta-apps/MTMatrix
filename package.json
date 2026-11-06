@@ -5,11 +5,11 @@
   "description": "MTMatrix — compare Montana Cadastral property features side by side: map selection, Feature Matrix table, change detection, exports.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --env-file-if-exists=.env server.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "dependencies": {
     "express": "^4.19.2"

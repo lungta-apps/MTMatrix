@@ -11,7 +11,9 @@
  *   GET /api/slice?geocode=&taxYear=   one property: summary, dwelling + depreciation, unified features[],
  *                                      appraisal history (total value per year)
  *   GET /api/parcel?geocode=           one parcel shape (GeoJSON)
- *   GET /api/parcels?bbox=w,s,e,n      parcel shapes in the map view (simplified)
+ *   GET /api/parcels?bbox=w,s,e,n      parcel shapes in the map view (simplified) + street address
+ *   GET /api/values?geocodes=a,b,c     appraised total value per year for many parcels (map value labels)
+ *   GET /api/config                    browser settings (the Google Maps key, when GOOGLE_MAPS_API_KEY is set)
  *   GET /api/address?q=                address -> matching parcels (ArcGIS; cadastralapi has no address search)
  * Also serves public/ (the whole frontend).
  *
@@ -37,7 +39,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 // One well-behaved fetch to the cadastral API.
 // Custom User-Agent + a hard timeout, exactly like the old GeocodeApp did.
 // ---------------------------------------------------------------------------
-async function cadastralFetch(endpoint, params) {
+async function cadastralFetch(endpoint, params, ttlMs) {
   const url = new URL(API_BASE + endpoint);
   Object.entries(params || {}).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
@@ -45,7 +47,7 @@ async function cadastralFetch(endpoint, params) {
   const key = url.toString();
 
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;
+  if (hit && Date.now() - hit.at < (ttlMs || CACHE_TTL_MS)) return hit.data;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -108,6 +110,16 @@ function rating(desc, code) {
 // Strip a leading code prefix like "33 - " or "CPA2 - " for display.
 function stripCode(s) {
   return String(s || "").replace(/^\s*[A-Za-z0-9]+\s*-\s*/, "").trim();
+}
+
+// Appraisal history -> total appraised value per tax year, oldest first
+// (e.g. 2024, 2025, 2026). Land/building splits are deliberately left out.
+function appraisalTotals(history) {
+  const seen = new Set();
+  return (Array.isArray(history) ? history : [])
+    .map((h) => ({ year: Number(h.taxYear) || null, total: typeof h.finalTotalValue === "number" ? h.finalTotalValue : null }))
+    .filter((a) => a.year && !seen.has(a.year) && seen.add(a.year))
+    .sort((a, b) => a.year - b.year);
 }
 
 // Fetch an endpoint but never throw — return [] and record a warning instead,
@@ -282,13 +294,7 @@ app.get("/api/slice", async (req, res) => {
       safeArray("/v1/Appraisal/History", { geocode }, "appraisal history", warnings),
     ]);
 
-    // Total appraised value per tax year, oldest first (e.g. 2024, 2025, 2026).
-    // Land/building splits are deliberately left out.
-    const seenYears = new Set();
-    const appraisals = history
-      .map((h) => ({ year: Number(h.taxYear) || null, total: typeof h.finalTotalValue === "number" ? h.finalTotalValue : null }))
-      .filter((a) => a.year && !seenYears.has(a.year) && seenYears.add(a.year))
-      .sort((a, b) => a.year - b.year);
+    const appraisals = appraisalTotals(history);
 
     // 4) Residential dwelling detail (for the header card), when present.
     let dwelling = null;
@@ -333,6 +339,43 @@ app.get("/api/slice", async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// VALUES FOR THE MAP:  GET /api/values?geocodes=a,b,c   (up to 100 per call)
+// One Montana call per parcel (Appraisal History only), cached 6 h, at most
+// VALUES_POOL in flight at once. -> { values: { "<geocode>": [{year,total}] | null } }
+// null = the lookup failed for that parcel (the map just shows no label).
+// ---------------------------------------------------------------------------
+const VALUES_MAX = 100;
+const VALUES_POOL = 12;
+// Montana publishes nightly, so map values can be cached far longer than the 5-minute default.
+const VALUES_TTL_MS = 6 * 60 * 60 * 1000;
+app.get("/api/values", async (req, res) => {
+  const list = [...new Set(String(req.query.geocodes || "").split(",").map((g) => cleanGeocode(g)).filter(Boolean))];
+  if (!list.length) return res.status(400).json({ error: "Pass geocodes=a,b,c (letters, digits, hyphens)." });
+  if (list.length > VALUES_MAX) return res.status(400).json({ error: `At most ${VALUES_MAX} geocodes per request.` });
+  const values = {};
+  let next = 0;
+  async function worker() {
+    while (next < list.length) {
+      const g = list[next++];
+      try {
+        values[g] = appraisalTotals(await cadastralFetch("/v1/Appraisal/History", { geocode: g }, VALUES_TTL_MS));
+      } catch (err) {
+        values[g] = null;
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(VALUES_POOL, list.length) }, worker));
+  res.json({ values });
+});
+
+// Browser settings. The Google key is used in the browser (tiles + Street View load
+// straight from Google), so it is NOT a secret: it is protected by the website and
+// API restrictions on the key in Google Cloud. Keeping it in an env var keeps it out of git.
+app.get("/api/config", (req, res) => {
+  res.json({ googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || null });
+});
+
 // ===========================================================================
 // MAP: parcel geometry from Montana's public ArcGIS parcels layer.
 // cadastralapi has NO geometry; this is the same layer the old GeocodeApp used.
@@ -372,7 +415,12 @@ function arcgisToGeoJSON(features) {
       .filter((f) => f.geometry && Array.isArray(f.geometry.rings))
       .map((f) => ({
         type: "Feature",
-        properties: { PARCELID: f.attributes && (f.attributes.PARCELID || f.attributes.parcelid) },
+        properties: {
+          PARCELID: f.attributes && (f.attributes.PARCELID || f.attributes.parcelid),
+          address: f.attributes
+            ? [f.attributes.AddressLine1, f.attributes.AddressLine2].map((s) => (s || "").trim()).filter(Boolean).join(" ") || null
+            : null,
+        },
         geometry: { type: "Polygon", coordinates: f.geometry.rings },
       })),
   };
@@ -425,7 +473,7 @@ app.get("/api/parcels", async (req, res) => {
       geometryType: "esriGeometryEnvelope",
       inSR: "4326",
       spatialRel: "esriSpatialRelIntersects",
-      outFields: "PARCELID",
+      outFields: "PARCELID,AddressLine1,AddressLine2",
       returnGeometry: "true",
       outSR: "4326",
       maxAllowableOffset: String(maxOffset),
