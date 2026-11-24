@@ -13,7 +13,7 @@ Built for Montana DOR appraisers, not the general public.
 | **Hosting** | Vercel, auto-deploys every push to `main` (see [Deployment](#deployment)) |
 | **Stack** | Node.js + Express proxy, one static HTML page (vanilla JS, Leaflet, MapLibre, SheetJS) |
 | **Data** | Montana `cadastralapi` (appraisal detail) + Montana ArcGIS parcels layer (shapes, address search) |
-| **Last updated** | 2026-11-01 |
+| **Last updated** | 2026-11-23 |
 
 ---
 
@@ -22,14 +22,15 @@ Built for Montana DOR appraisers, not the general public.
 **Finding properties**
 - **Search by geocode or address.** One box does both. Geocodes work with or without hyphens. An address with one match loads right away; several matches open a picker.
 - **Search by primary owner.** Type an owner name, pick a county (one at a time), and every parcel whose *primary* owner matches loads into the list (up to 50) and is highlighted on the map. Matching is exact except for capitalization, commas/periods and extra spaces, so `kraus ricinda l` finds `KRAUS, RICINDA L`, but `KRAUS RICINDA` does not.
-- **Tabs: Features · Owner · Land.** Every tab shows the same listed parcels. Owner = all owners (primary marked), ownership %, interest type, mailing address. Land = category/subcategory (e.g. `RP, Residential Property`), Market Land (method, type, sq ft or acres) and Ag/Forest land (acres per acre type + total). On the Land tab, **land type chips** filter the list (click to hide/show a type, Shift-click to show only that type) and **Totals** sums the listed properties' land: Market Land square feet and acres (each item counted under its method), Ag/Forest acres per acre type, and an all-land acre total. The sidebar, tables, exports and totals all follow the map view and the land type filter (footer shows shown/total, e.g. `3/15`). The **Table** button opens the matrix for whichever tab is showing (Feature, Owner or Land Matrix) and stays on it until it's closed; exports follow that table.
-- **Parcel map.** Search flies the map to the parcel. At zoom 16+ parcel outlines load and can be clicked.
+- **Tabs: Features · Owner · Land** (a Summary tab is marked "soon"). Every tab shows the same listed parcels. Owner = all owners (primary marked), ownership %, interest type, mailing address. Land = category/subcategory (e.g. `RP, Residential Property`), Market Land (method, type, sq ft or acres) and Ag/Forest land (acres per acre type + total). On the Land tab, **land type chips** filter the list (click to hide/show a type, Shift-click to show only that type) and **Totals** sums the listed properties' land: Market Land square feet and acres (each item counted under its method), Ag/Forest acres per acre type, and an all-land acre total. The sidebar, tables, exports and totals all follow the map view and the land type filter (footer shows shown/total, e.g. `3/15`). The **Table** button opens the matrix for whichever tab is showing (Feature, Owner or Land Matrix) and stays on it until it's closed; exports follow that table.
+- **Parcel map.** Search flies the map to the parcel. At zoom 16+ parcel outlines load and can be clicked. Below zoom 16, listed parcels are still drawn (outline + dot), so county-wide owner search results stay visible zoomed out.
 - **Map selection tools.** Click a parcel to add it, right-click a listed parcel to remove it, or select an area with **Box** or **Polygon** (up to 25 parcels per area selection).
 - **Basemap picker.** OpenFreeMap Dark (vector, default, sharp to zoom 20), Esri Dark Gray, or Esri World Imagery. Your choice is remembered; `?basemap=ofm|esri|imagery` in the URL overrides it.
 
 **The Feature Matrix (table)**
 - Rows are properties. Columns are Address, Geocode, Type, the three depreciation ratings (**Condition**, **Desirability**, **Location**), the total appraised value for each published tax year (e.g. **2024 Value**, **2025 Value**, **2026 Value**; years follow the appraisal history automatically), then one column per feature type (for example "Deck, Wood"), with a colored dot showing its group.
 - Each cell lists the actual items: area in sq ft (or acres), or `W × L × H ft` when only dimensions exist, or ✓ when the feature is present with no size. Multiple items show as `×N`.
+- **Owner Matrix and Land Matrix.** Opening the table from the Owner or Land tab gives a table of that tab's data instead (Owner: primary/other owners, ownership %, interest type, mailing address; Land: land type, Method, Type, **Sq ft** and **Acres** as separate numeric columns, one acres column per ag/forest acre type, total ag acres). They support hiding columns and all exports; change detection is Feature Matrix only.
 - **Change detection.** With 3 or more properties, a red **"N differ"** pill appears on any column where some properties don't match the rest. Click a pill to highlight those cells, or **Check all** for every column. Appraised-value columns are left out (values naturally differ). Rule of thumb: if 50%+ of properties have a feature, flag the ones missing it or with a different size than the most common one; if under 50% have it, flag the ones that do.
 - **Table ↔ map link.** The locate pin on a row (or clicking a property in the side panel or on the map) flies the map to that parcel and highlights it in amber on the map and in every open table.
 - **Bookmarks.** Click a row to mark it in cyan as a place-keeper.
@@ -99,18 +100,25 @@ Leaflet 1.9.4 and SheetJS 0.18.5 (cdnjs); MapLibre GL 5.24.0 and @maplibre/mapli
 
 ```jsonc
 {
-  "property": { "geocode", "taxYear", "propertyType", "cls", "address", "cityStateZip", "category", "subCategory" },
+  "property": { "geocode", "taxYear", "propertyType", "cls", "address", "cityStateZip", "category", "subCategory",
+                "landType" },   // landType = category + subcategory, e.g. "RP, Residential Property"
   "dwelling": { "yearBuilt", "age", "sfla", "grade", "rcnld", "pctGood",
                 "condition", "propertyDesirability", "locationDesirability" },   // null if no dwelling
   "appraisals": [ { "year", "total" } ],   // from /v1/Appraisal/History, oldest first; land/building omitted
   "features": [ { "group", "description", "area", "areaUnit", "dims", "cost", "year" } ],
+  "land": {
+    "market": [ { "method", "type", "width", "depth", "sqFt", "acres", "classCode", "value" } ],   // [] for condos
+    "ag": [ { "acreType", "acres", "classCode", "perAcreValue", "value" } ],
+    "agTotalAcres": 0                     // null when there is no ag/forest land
+  },
+  "owners": [ { "name", "primary", "pct", "interest", "mailing", "cityStateZip", "country" } ],   // primary first
   "warnings": [ "…" ]
 }
 ```
 
 `group` is `Dwelling Additions`, `Buildings & Improvements`, `Commercial Buildings`, or `Ag / Forest Land`. `dims` (like `"25 × 10 ft"`) is only set when there's no area.
 
-Server behavior: 5-minute in-memory cache, custom User-Agent, 30-second timeout on every call to Montana. `taxYear` is always sent to the detail endpoints because Montana returns HTTP 400 without it.
+Server behavior: 5-minute in-memory cache, custom User-Agent, 30-second timeout on every call to Montana. ArcGIS calls retry once on an error (its "Error performing query operation" is intermittent), and `/api/parcel` tries the hyphen-less geocode first, since some parcels only match that form. `taxYear` is always sent to the detail endpoints because Montana returns HTTP 400 without it.
 
 ---
 
@@ -154,14 +162,19 @@ Other useful test parcels:
 - **Map building footprints** on the OpenFreeMap basemap come from OpenStreetMap and can be missing in places; switch basemaps if so.
 - **Multi-part condo parcels** are matched by the center of their drawn shape, which is occasionally off.
 - **Dark Reader** and similar browser extensions can hide the faint table grid lines; turn them off for this site.
+- **"fetch failed" locally but the live site works?** Montana's servers block some VPN locations. Switch VPN location and retry.
 
 ## Ideas / backlog
 
+- **Summary tab** (shown as "soon").
+- Owner search across **all counties** (left off on purpose: it would take 56 searches; would need a result cap).
+- Change detection on the Owner and Land Matrix.
 - Normalize geocode display to the hyphenated `2-4-2-1-2-2-4` form.
 - Pin the Geocode column beside Address when scrolling sideways.
-- More one-value-per-property columns from data already fetched: utility rating, year built, SFLA, beds/baths, style, grade, basement, garage, heating/cooling, RCNLD, % good; plus `/v1/Appraisal`, `/MarketLand`, `/v1/Properties/Owner`.
-- "Load more" past the 25-parcel area cap.
+- More one-value-per-property columns from data already fetched: utility rating, year built, SFLA, beds/baths, style, grade, basement, garage, heating/cooling, RCNLD, % good; Summary legal description, S/T/R.
+- "Load more" past the 25-parcel area cap and the 50-parcel owner search cap.
 - Commit the Vercel run config to the repo so deployment is documented in code.
+- **Values on the map** is in progress on branch `feature/values-on-map` (not merged): Google satellite basemap, value labels, a property card with Street View, value colors on the dark basemaps.
 
 ## History
 
@@ -179,3 +192,6 @@ Other useful test parcels:
 | | `39f3d31`, `7622b84` | OpenFreeMap dark basemap; basemap picker |
 | 2026-10-27 | `25139ed` | Table ↔ map link: locate pin, amber highlight |
 | | `6823b90` | Change detection: red "differ" pills |
+| 2026-11-01 | `8029a40` | README rewrite |
+| 2026-11-03 | `0f62afa` | Appraised values by year in side panel and table |
+| 2026-11-06 | `e16f7e5` | Owner search by county; Owner and Land tabs and matrices; land type filter and totals; sidebar and tables follow the map view |
